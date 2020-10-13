@@ -10,14 +10,13 @@ const VaultFactoryProxy = artifacts.require("VaultFactoryProxy");
 
 const StubDerivative = artifacts.require("StubDerivative");
 const StubFeed = artifacts.require("StubFeed");
+const StubAggregatorProxy = artifacts.require("StubAggregatorProxy");
 const StubToken = artifacts.require("StubToken");
 const StubCollateralSplit = artifacts.require("StubCollateralSplit");
 
 const ERC20PresetMinter = artifacts.require("ERC20PresetMinter");
 
 const FRACTION_MULTIPLIER = Math.pow(10, 12);
-const NEGATIVE_INFINITY = "-57896044618658097711785492504343953926634992332820282019728792003956564819968";
-const DECIMALS_DEFAULT = 18;
 
 const STAGE = {
   Created: 0,
@@ -26,6 +25,9 @@ const STAGE = {
   Settled: 3,
   Error: 3
 };
+
+const makeRoundIdForPhase = (phaseId, roundId) => web3.utils.toBN(phaseId).shln(64).add(web3.utils.toBN(roundId)).toString();
+const makeRoundIdForPhase1 = (roundId) => makeRoundIdForPhase(1, roundId);
 
 const get = {};
 
@@ -78,13 +80,15 @@ const createCollateralWith = async (decimal, symbol) => {
 };
 
 const createStubFeed = async (symbol) => {
-  const stubFeed = await StubFeed.new();
+  const stubFeedPhase = await StubFeed.new();
+  const stubFeed = await StubAggregatorProxy.new(stubFeedPhase.address);
   await get["vaultFactory"].setOracle(web3.utils.keccak256(stubFeed.address), stubFeed.address); //symbol || "STUBFEED"
   get["stubFeed"] = stubFeed;
+  get["stubFeedPhase"] = stubFeedPhase;
 };
 
 const setStubFeedRound = async (value, timestamp) => {
-  await get["stubFeed"].addRound(value,  timestamp);
+  await get["stubFeedPhase"].addRound(value,  timestamp);
 };
 
 const calcConversions = async (startValue, endValue) => {
@@ -230,6 +234,10 @@ const checkTokensAllowanceAreEqualFor = async (user, primaryAmount, complementAm
   assert.equal((await get["complementToken"].allowance.call(user, get["vault"].address)).toString(), complementAmount.toString());
 };
 
+const settleWithDefaultHints = async (startHints, endHints) => {
+  await get["vault"].settle(startHints || [makeRoundIdForPhase1(1)], endHints || [makeRoundIdForPhase1(2)]);
+}
+
 module.exports = {
   get,
   toBN,
@@ -258,5 +266,6 @@ module.exports = {
   checkCollateralAreEmptyFor,
   checkTokensAreEmptyFor,
   checkTokensAreEqualFor,
-  checkTokensAllowanceAreEqualFor
+  checkTokensAllowanceAreEqualFor,
+  settleWithDefaultHints,
 };

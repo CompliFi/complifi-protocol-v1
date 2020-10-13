@@ -65,6 +65,9 @@ const STAGE = {
   Error: 3
 };
 
+const makeRoundIdForPhase = (phaseId, roundId) => web3.utils.toBN(phaseId).shln(64).add(web3.utils.toBN(roundId)).toString();
+const makeRoundIdForPhase1 = (roundId) => makeRoundIdForPhase(1, roundId);
+
 contract("Vault", accounts => {
   let startValue, endValue;
 
@@ -156,7 +159,7 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         try {
-          await i.get["vault"].settle([0],[0]);
+          await i.settleWithDefaultHints();
           assert.fail();
         } catch (err) {
           assert.ok(/revert/.test(err.message));
@@ -164,7 +167,7 @@ contract("Vault", accounts => {
 
         increaseTime(days(21));
 
-        await i.get["vault"].settle([0],[0]);
+        await i.settleWithDefaultHints();
 
         assert.equal((await i.get["vault"].underlyingStart.call()).toNumber(), startValue);
         assert.equal((await i.get["vault"].underlyingEnd.call()).toNumber(), endValue);
@@ -191,13 +194,114 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         increaseTime(days(28));
-        await i.get["vault"].settle([0],[0]);
+        await i.settleWithDefaultHints();
 
         assert.equal((await i.get["vault"].underlyingStart.call()).toString(), startValue);
         assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), endValue);
 
         assert.equal((await i.get["vault"].primaryConversion.call()).toString(), primaryConversion);
         assert.equal((await i.get["vault"].complementConversion.call()).toString(), complementConversion);
+      });
+
+      it("...should delay settlement.", async () => {
+        assert.equal((await i.get["vaultFactory"].settlementDelay.call()).toString(), 0);
+        await i.get["vaultFactory"].setSettlementDelay(hours(3));
+        assert.equal((await i.get["vaultFactory"].settlementDelay.call()).toString(), hours(3));
+
+        assert.equal((await i.get["vault"].settlementDelay.call()).toString(), 0);
+        await i.createVaultBy(STUB_SPECIFICATION_SYMBOL);
+        assert.equal((await i.get["vault"].settlementDelay.call()).toString(), hours(3));
+
+        const user = accounts[1];
+        const value = COLLATERAL_VALUE;
+        await i.issueCollateralsTo(user, value);
+        await i.mintFor(user, value);
+
+        increaseTime(days(7));
+        await i.get["vault"].live();
+
+        increaseTime(days(21));
+
+        try {
+          await i.settleWithDefaultHints();
+          assert.fail();
+        } catch (err) {
+          assert.ok(/revert Delayed settlement/.test(err.message));
+        }
+
+        try {
+          await i.redeemFor(user, 1, 0);
+          assert.fail();
+        } catch (err) {
+          assert.ok(/revert Delayed settlement/.test(err.message));
+        }
+
+        increaseTime(hours(3));
+
+        await i.settleWithDefaultHints();
+
+        assert.equal(await i.get["vault"].state.call(), STAGE.Settled);
+      });
+
+      it("...should pause and unpause vault.", async () => {
+        const user = accounts[1];
+        const value = COLLATERAL_VALUE;
+        await i.issueCollateralsTo(user, value);
+        await i.mintFor(user, value);
+
+        increaseTime(days(7));
+        await i.get["vault"].live();
+
+        console.log(await i.get["vault"].owner());
+        console.log(i.get["vaultFactory"].address);
+
+        await i.get["vaultFactory"].pauseVault(i.get["vault"].address);
+
+        increaseTime(days(21));
+
+        try {
+          await i.settleWithDefaultHints();
+          assert.fail();
+        } catch (err) {
+          assert.ok(/revert Pausable: paused/.test(err.message));
+        }
+
+        increaseTime(days(1));
+
+        await i.get["vaultFactory"].unpauseVault(i.get["vault"].address);
+
+        await i.settleWithDefaultHints();
+
+        assert.equal(await i.get["vault"].state.call(), STAGE.Settled);
+      });
+
+      it("...should redeem if vault paused after settlement.", async () => {
+        const user = accounts[1];
+        const value = COLLATERAL_VALUE;
+        const fee = await i.calcFee(value);
+        await i.issueCollateralsTo(user, value);
+        await i.mintFor(user, value);
+
+        increaseTime(days(7));
+        await i.get["vault"].live();
+
+        console.log(await i.get["vault"].owner());
+        console.log(i.get["vaultFactory"].address);
+
+        increaseTime(days(21));
+
+        await i.settleWithDefaultHints();
+
+        await i.get["vaultFactory"].pauseVault(i.get["vault"].address);
+
+        increaseTime(days(1));
+
+        const denominated = await i.denominate(value - fee);
+        await i.approveTokensFor(user, denominated, denominated);
+        //Redeem minimal amount
+        const MINIMAL_COLLATERAL = 1;
+        await i.redeemFor(user, MINIMAL_COLLATERAL, 0);
+        await i.checkCollateralBalanceEqualFor(user, i.toBN(MINIMAL_COLLATERAL));
       });
     });
 
@@ -284,7 +388,7 @@ contract("Vault", accounts => {
         }
 
         increaseTime(days(21));
-        await i.get["vault"].settle([0],[0]);
+        await i.settleWithDefaultHints();
 
         try {
           await i.mintFor(user, value);
@@ -362,7 +466,7 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         increaseTime(days(21));
-        await i.get["vault"].settle([0],[0]);
+        await i.settleWithDefaultHints();
 
         const denominated = await i.denominate(value - fee);
         await i.approveTokensFor(user, denominated, denominated);
@@ -405,7 +509,7 @@ contract("Vault", accounts => {
         await i.checkTokensAreEqualFor(user, denominated, denominated);
 
         increaseTime(days(21));
-        await i.get["vault"].settle([0],[0]);
+        await i.settleWithDefaultHints();
 
         await i.redeemFor(user, denominated, 0);
         await i.redeemFor(user, 0, denominated);
@@ -430,7 +534,7 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         increaseTime(days(21));
-        await i.get["vault"].settle([0],[0]);
+        await i.settleWithDefaultHints();
 
         const denominated = await i.denominate(value - fee);
         await i.approveTokensFor(user, denominated, denominated);
@@ -469,7 +573,7 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         increaseTime(days(21));
-        await i.get["vault"].settle([0],[0]);
+        await i.settleWithDefaultHints();
 
         assert.equal((await i.get["vault"].underlyingStart.call()).toString(), 100);
         assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), 110);
@@ -482,8 +586,9 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         increaseTime(days(21));
+
         try {
-          await i.get["vault"].settle([0],[0]);
+          await i.settleWithDefaultHints([makeRoundIdForPhase1(1)], [makeRoundIdForPhase1(1)]);
           assert.fail();
         } catch (err) {
           assert.ok(/revert u_0 is less or equal zero/.test(err.message));
@@ -496,10 +601,10 @@ contract("Vault", accounts => {
 
         increaseTime(days(21));
         try {
-          await i.get["vault"].settle([0],[0]);
+          await i.settleWithDefaultHints();
           assert.fail();
         } catch (err) {
-          assert.ok(/revert/.test(err.message));
+          assert.ok(/revert No data present/.test(err.message));
         }
       });
 
@@ -511,7 +616,8 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         increaseTime(days(21));
-        await i.get["vault"].settle([0],[0]);
+
+        await i.settleWithDefaultHints();
 
         assert.equal((await i.get["vault"].underlyingStart.call()).toString(), 100);
         assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), 0);
@@ -525,7 +631,7 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         increaseTime(days(21));
-        await i.get["vault"].settle([0],[0]);
+        await i.settleWithDefaultHints();
 
         assert.equal((await i.get["vault"].underlyingStart.call()).toString(), 100);
         assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), -100);
@@ -541,7 +647,7 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         increaseTime(days(21));
-        await i.get["vault"].settle([0],[0]);
+        await i.settleWithDefaultHints([makeRoundIdForPhase1(1)], [makeRoundIdForPhase1(1)]);
 
         assert.equal((await i.get["vault"].underlyingStart.call()).toString(), 100);
         assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), 100);

@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 import "./IDerivativeSpecification.sol";
 import "./registries/IAddressRegistry.sol";
 import "./IVaultBuilder.sol";
+import "./IPausableVault.sol";
 
 /// @title Vault Factory implementation contract
 /// @notice Creates new vaults and registers them in internal storage
@@ -30,6 +31,8 @@ contract VaultFactory is OwnableUpgradeSafe {
     IVaultBuilder public vaultBuilder;
     IAddressRegistry public oracleIteratorRegistry;
 
+    uint public settlementDelay;
+
     event VaultCreated(bytes32 indexed derivativeSymbol, address vault, address specification);
 
     /// @notice Initializes vault factory contract storage
@@ -45,25 +48,23 @@ contract VaultFactory is OwnableUpgradeSafe {
         uint _protocolFee,
         address _feeWallet,
         uint _authorFeeLimit,
-        address _vaultBuilder
+        address _vaultBuilder,
+        uint _settlementDelay
     ) external initializer {
 
         __Ownable_init();
 
-        require(_derivativeSpecificationRegistry != address(0), "Derivative specification registry");
-        derivativeSpecificationRegistry = IAddressRegistry(_derivativeSpecificationRegistry);
-        require(_oracleRegistry != address(0), "Oracle registry");
-        oracleRegistry = IAddressRegistry(_oracleRegistry);
-        require(_oracleIteratorRegistry != address(0), "Oracle iterator registry");
-        oracleIteratorRegistry = IAddressRegistry(_oracleIteratorRegistry);
-        require(_collateralTokenRegistry != address(0), "Collateral token registry");
-        collateralTokenRegistry = IAddressRegistry(_collateralTokenRegistry);
-        require(_collateralSplitRegistry != address(0), "Collateral split registry");
-        collateralSplitRegistry = IAddressRegistry(_collateralSplitRegistry);
+        setDerivativeSpecificationRegistry(_derivativeSpecificationRegistry);
+        setOracleRegistry(_oracleRegistry);
+        setOracleIteratorRegistry(_oracleIteratorRegistry);
+        setCollateralTokenRegistry(_collateralTokenRegistry);
+        setCollateralSplitRegistry(_collateralSplitRegistry);
 
         setTokenBuilder(_tokenBuilder);
         setFeeLogger(_feeLogger);
         setVaultBuilder(_vaultBuilder);
+
+        setSettlementDelay(_settlementDelay);
 
         protocolFee = _protocolFee;
         authorFeeLimit = _authorFeeLimit;
@@ -113,7 +114,8 @@ contract VaultFactory is OwnableUpgradeSafe {
             collateralSplit,
             tokenBuilder,
             feeLogger,
-            authorFeeLimit
+            authorFeeLimit,
+            settlementDelay
         );
         emit VaultCreated(_derivativeSymbolHash, vault, address(derivativeSpecification));
         _vaults.push(vault);
@@ -140,6 +142,43 @@ contract VaultFactory is OwnableUpgradeSafe {
     function setVaultBuilder(address _vaultBuilder) public onlyOwner {
         require(_vaultBuilder != address(0), "Vault builder");
         vaultBuilder = IVaultBuilder(_vaultBuilder);
+    }
+
+    function setSettlementDelay(uint _settlementDelay) public onlyOwner {
+        settlementDelay = _settlementDelay;
+    }
+
+    function setDerivativeSpecificationRegistry(address _derivativeSpecificationRegistry) public onlyOwner {
+        require(_derivativeSpecificationRegistry != address(0), "Derivative specification registry");
+        derivativeSpecificationRegistry = IAddressRegistry(_derivativeSpecificationRegistry);
+    }
+
+    function setOracleRegistry(address _oracleRegistry) public onlyOwner {
+        require(_oracleRegistry != address(0), "Oracle registry");
+        oracleRegistry = IAddressRegistry(_oracleRegistry);
+    }
+
+    function setOracleIteratorRegistry(address _oracleIteratorRegistry) public onlyOwner {
+        require(_oracleIteratorRegistry != address(0), "Oracle iterator registry");
+        oracleIteratorRegistry = IAddressRegistry(_oracleIteratorRegistry);
+    }
+
+    function setCollateralTokenRegistry(address _collateralTokenRegistry) public onlyOwner {
+        require(_collateralTokenRegistry != address(0), "Collateral token registry");
+        collateralTokenRegistry = IAddressRegistry(_collateralTokenRegistry);
+    }
+
+    function setCollateralSplitRegistry(address _collateralSplitRegistry) public onlyOwner {
+        require(_collateralSplitRegistry != address(0), "Collateral split registry");
+        collateralSplitRegistry = IAddressRegistry(_collateralSplitRegistry);
+    }
+
+    function pauseVault(address _vault) public onlyOwner {
+        IPausableVault(_vault).pause();
+    }
+
+    function unpauseVault(address _vault) public onlyOwner {
+        IPausableVault(_vault).unpause();
     }
 
     function setDerivativeSpecification(bytes32 _key, address _value) external {
@@ -181,5 +220,5 @@ contract VaultFactory is OwnableUpgradeSafe {
         return _vaults;
     }
 
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 }

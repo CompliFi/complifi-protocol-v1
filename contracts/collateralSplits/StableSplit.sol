@@ -9,14 +9,14 @@ contract StableSplit is CollateralSplitParent{
         return 'Stab';
     }
 
-    function splitNominalValue(int _normalizedValue) public override pure returns(int _split){
-        _split = 0;
+    function splitNominalValue(int _normalizedValue) public override pure returns(int){
         if(_normalizedValue < -(FRACTION_MULTIPLIER/2)) { // < -0.5
-            _split = FRACTION_MULTIPLIER; // 100%
+            return FRACTION_MULTIPLIER; // 100%
         }
 
         if(_normalizedValue >= -(FRACTION_MULTIPLIER/2)) { // >= -0.5
-            _split = FRACTION_MULTIPLIER * FRACTION_MULTIPLIER / (2 * FRACTION_MULTIPLIER  + _normalizedValue * 2);  // 1/(2+2*U)
+            return FRACTION_MULTIPLIER * FRACTION_MULTIPLIER / (2 * FRACTION_MULTIPLIER  + _normalizedValue * 2);  // 1/(2+2*U)
         }
+        return 0;
     }
 }

@@ -16,6 +16,7 @@ interface IVaultBuilder {
         address _collateralSplit,
         address _tokenBuilder,
         address _feeLogger,
-        uint _authorFeeLimit
+        uint _authorFeeLimit,
+        uint _settlementDelay
     ) external returns(address);
 }

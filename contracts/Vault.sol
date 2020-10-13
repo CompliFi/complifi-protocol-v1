@@ -4,6 +4,10 @@ pragma solidity >=0.4.21 <0.7.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+
 import "./tokens/EIP20NonStandardInterface.sol";
 
 import "./IDerivativeSpecification.sol";
@@ -12,10 +16,12 @@ import "./tokens/IERC20MintedBurnable.sol";
 import "./tokens/ITokenBuilder.sol";
 import "./IFeeLogger.sol";
 
+import "./IPausableVault.sol";
+
 /// @title Derivative implementation Vault
 /// @notice A smart contract that references derivative specification and enables users to mint and redeem the derivative
-contract Vault {
-    using SafeMath for uint;
+contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
+    using SafeMath for uint256;
     using SafeMath for uint8;
 
     uint public constant FRACTION_MULTIPLIER = 10**12;
@@ -37,6 +43,8 @@ contract Vault {
     uint public liveTime;
     /// @notice end of live period
     uint public settleTime;
+
+    uint public settlementDelay;
 
     /// @notice underlying value at the start of live period
     int public underlyingStart;
@@ -88,8 +96,9 @@ contract Vault {
         address _collateralSplit,
         address _tokenBuilder,
         address _feeLogger,
-        uint _authorFeeLimit
-    ) public {
+        uint _authorFeeLimit,
+        uint _settlementDelay
+    ) Ownable() public {
         require(_initializationTime > 0, "Initialization time");
         initializationTime = _initializationTime;
 
@@ -132,6 +141,16 @@ contract Vault {
         settleTime = liveTime + derivativeSpecification.livePeriod();
         require(liveTime > block.timestamp, "Live time");
         require(settleTime > block.timestamp, "Settle time");
+
+        settlementDelay = _settlementDelay;
+    }
+
+    function pause() external override onlyOwner() {
+        _pause();
+    }
+
+    function unpause() external override onlyOwner() {
+        _unpause();
     }
 
     /// @notice Initialize vault by creating derivative token and switching to Minting state
@@ -167,16 +186,18 @@ contract Vault {
     /// set underlyingStart value and set underlyingEnd value,
     /// calculate primaryConversion and complementConversion params
     /// @dev Reverts if underlyingStart or underlyingEnd are not available
-    function settle(uint[] memory underlyingStartRoundHints, uint[] memory underlyingEndRoundHints) public {
+    function settle(uint[] memory _underlyingStartRoundHints, uint[] memory _underlyingEndRoundHints)
+    public whenNotPaused() {
         if(state != State.Live) {
             revert('Incorrect state');
         }
-        require(block.timestamp >= settleTime, "Incorrect time");
+        require(block.timestamp >= (settleTime), "Incorrect time");
+        require(block.timestamp >= (settleTime + settlementDelay), "Delayed settlement");
         changeState(State.Settled);
 
         uint split;
         (split, underlyingStart, underlyingEnd) = collateralSplit.split(
-            oracles, oracleIterators, liveTime, settleTime, underlyingStartRoundHints, underlyingEndRoundHints
+            oracles, oracleIterators, liveTime, settleTime, _underlyingStartRoundHints, _underlyingEndRoundHints
         );
         split = range(split);
 
@@ -194,14 +215,17 @@ contract Vault {
 
     function range(uint _split) public pure returns(uint) {
         if(_split > FRACTION_MULTIPLIER) {
-            return uint(FRACTION_MULTIPLIER);
+            return FRACTION_MULTIPLIER;
         }
-        return uint(_split);
+        if(_split < 0) {
+            return 0;
+        }
+        return _split;
     }
 
     /// @notice Mints primary and complement derivative tokens
     /// @dev Checks and switches to the right state and does nothing if vault is not in Minting state
-    function mint(uint _collateralAmount) external {
+    function mint(uint _collateralAmount) external nonReentrant() {
         if(block.timestamp >= liveTime && state == State.Minting) {
             live();
         }
@@ -226,7 +250,7 @@ contract Vault {
     }
 
     /// @notice Refund equal amounts of derivative tokens for collateral at any time
-    function refund(uint _tokenAmount) external {
+    function refund(uint _tokenAmount) external nonReentrant() {
         require(_tokenAmount > 0, "Zero amount");
         require(_tokenAmount <= primaryToken.balanceOf(msg.sender), "Insufficient primary amount");
         require(_tokenAmount <= complementToken.balanceOf(msg.sender), "Insufficient complement amount");
@@ -243,9 +267,9 @@ contract Vault {
     function redeem(
         uint _primaryTokenAmount,
         uint _complementTokenAmount,
-        uint[] memory underlyingStartRoundHints,
-        uint[] memory underlyingEndRoundHints
-    ) external {
+        uint[] memory _underlyingStartRoundHints,
+        uint[] memory _underlyingEndRoundHints
+    ) external nonReentrant() {
         require(_primaryTokenAmount > 0 || _complementTokenAmount > 0, "Both tokens zero amount");
         require(_primaryTokenAmount <= primaryToken.balanceOf(msg.sender), "Insufficient primary amount");
         require(_complementTokenAmount <= complementToken.balanceOf(msg.sender), "Insufficient complement amount");
@@ -255,7 +279,7 @@ contract Vault {
         }
 
         if(block.timestamp >= settleTime && state == State.Live) {
-            settle(underlyingStartRoundHints,underlyingEndRoundHints);
+            settle(_underlyingStartRoundHints, _underlyingEndRoundHints);
         }
 
         if(state == State.Settled) {

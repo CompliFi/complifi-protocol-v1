@@ -2,7 +2,7 @@
 
 pragma solidity >=0.4.21 <0.7.0;
 
-interface IOracleIterator {
+interface IOracleIteratorV1 {
     /// @notice Proof of oracle iterator contract
     /// @dev Verifies that contract is a oracle iterator contract
     /// @return true if contract is a oracle iterator contract
@@ -17,7 +17,7 @@ interface IOracleIterator {
     //  finds the value closest to a given timestamp
     /// @param _oracle iteratable oracle through
     /// @param _timestamp a given timestamp
-    /// @param _roundHints specified rounds for a given timestamp
+    /// @param _roundHint specified round for a given timestamp
     /// @return the value closest to a given timestamp
-    function getUnderlingValue(address _oracle, uint _timestamp, uint[] memory _roundHints) external view returns(int);
+    function getUnderlingValue(address _oracle, uint _timestamp, uint _roundHint) external view returns(int);
 }

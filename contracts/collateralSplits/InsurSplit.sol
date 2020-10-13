@@ -9,18 +9,18 @@ contract InsurSplit is CollateralSplitParent{
         return 'Insur';
     }
 
-    function splitNominalValue(int _normalizedValue) public override pure returns(int _split){
-        _split = 0;
+    function splitNominalValue(int _normalizedValue) public override pure returns(int){
         if(_normalizedValue >= 0) {
-            _split = FRACTION_MULTIPLIER / 2; // 0.5
+            return FRACTION_MULTIPLIER / 2; // 0.5
         }
 
         if(_normalizedValue < -(FRACTION_MULTIPLIER/2)) {
-            _split = FRACTION_MULTIPLIER; // 1
+            return FRACTION_MULTIPLIER; // 1
         }
 
         if(_normalizedValue >= -(FRACTION_MULTIPLIER/2) && _normalizedValue < 0) {
-            _split = (FRACTION_MULTIPLIER * FRACTION_MULTIPLIER) / ((2 * (FRACTION_MULTIPLIER + _normalizedValue)));  // 1 / 2 * ( 1 + U_T)
+            return (FRACTION_MULTIPLIER * FRACTION_MULTIPLIER) / ((2 * (FRACTION_MULTIPLIER + _normalizedValue)));  // 1 / 2 * ( 1 + U_T)
         }
+        return 0;
     }
 }

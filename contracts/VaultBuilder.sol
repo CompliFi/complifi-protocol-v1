@@ -17,23 +17,24 @@ contract VaultBuilder is IVaultBuilder{
         address _collateralSplit,
         address _tokenBuilder,
         address _feeLogger,
-        uint _authorFeeLimit
+        uint _authorFeeLimit,
+        uint _settlementDelay
     ) external override returns(address){
-        address vault = address(
-            new Vault(
-                _initializationTime,
-                _protocolFee,
-                _feeWallet,
-                _derivativeSpecification,
-                _collateralToken,
-                _oracles,
-                _oracleIterators,
-                _collateralSplit,
-                _tokenBuilder,
-                _feeLogger,
-                _authorFeeLimit
-            )
+        Vault vault = new Vault(
+            _initializationTime,
+            _protocolFee,
+            _feeWallet,
+            _derivativeSpecification,
+            _collateralToken,
+            _oracles,
+            _oracleIterators,
+            _collateralSplit,
+            _tokenBuilder,
+            _feeLogger,
+            _authorFeeLimit,
+            _settlementDelay
         );
-        return vault;
+        vault.transferOwnership(msg.sender);
+        return address(vault);
     }
 }

@@ -9,18 +9,18 @@ contract x5Split is CollateralSplitParent{
         return 'x5';
     }
 
-    function splitNominalValue(int _normalizedValue) public override pure returns(int _split){
-        _split = 0;
+    function splitNominalValue(int _normalizedValue) public override pure returns(int){
         if(_normalizedValue >= FRACTION_MULTIPLIER/5) { // 0.2
-            _split = FRACTION_MULTIPLIER; // 100%
+            return FRACTION_MULTIPLIER; // 100%
         }
 
         if(_normalizedValue <= -(FRACTION_MULTIPLIER/5)) { // -0.2
-            _split = 0; // 0%
+            return 0; // 0%
         }
 
         if(_normalizedValue > -(FRACTION_MULTIPLIER/5) && _normalizedValue < FRACTION_MULTIPLIER/5) {
-            _split = (FRACTION_MULTIPLIER + _normalizedValue * 5) / 2;  // (1+5*U) / 2
+            return (FRACTION_MULTIPLIER + _normalizedValue * 5) / 2;  // (1+5*U) / 2
         }
+        return 0;
     }
 }

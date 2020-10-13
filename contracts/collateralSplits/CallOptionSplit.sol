@@ -10,14 +10,14 @@ contract CallOptionSplit is CollateralSplitParent{
         return 'CallOption';
     }
 
-    function splitNominalValue(int _normalizedValue) public override pure returns(int _split){
-        _split = 0;
+    function splitNominalValue(int _normalizedValue) public override pure returns(int){
         if(_normalizedValue < 0) { // < 0
-            _split = 0; // 0%
+            return 0; // 0%
         }
 
         if(_normalizedValue >= 0) { // >= 0
-            _split = FRACTION_MULTIPLIER * _normalizedValue / (FRACTION_MULTIPLIER + _normalizedValue );  // U/(1+U)
+            return FRACTION_MULTIPLIER * _normalizedValue / (FRACTION_MULTIPLIER + _normalizedValue );  // U/(1+U)
         }
+        return 0;
     }
 }

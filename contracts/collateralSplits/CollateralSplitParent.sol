@@ -28,8 +28,8 @@ abstract contract CollateralSplitParent is ICollateralSplit {
         IOracleIterator iterator = IOracleIterator(_oracleIterators[0]);
         require(iterator.isOracleIterator(), "Not oracle iterator");
 
-        _underlyingStart = iterator.getUnderlingValue(_oracles[0], _liveTime, _underlyingStartRoundHints[0]);
-        _underlyingEnd = iterator.getUnderlingValue(_oracles[0], _settleTime, _underlyingEndRoundHints[0]);
+        _underlyingStart = iterator.getUnderlingValue(_oracles[0], _liveTime, _underlyingStartRoundHints);
+        _underlyingEnd = iterator.getUnderlingValue(_oracles[0], _settleTime, _underlyingEndRoundHints);
 
         _split = range(
             splitNominalValue(
