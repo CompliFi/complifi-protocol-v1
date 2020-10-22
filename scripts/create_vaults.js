@@ -15,13 +15,14 @@ module.exports = async (done) => {
   let INSTRUMENTS = [];
   if(networkId === 1) {
     INSTRUMENTS = [
+      "BTCx5-USDT",
+      "InsurETH",
+      "StabBTC",
       "CallBTC",
       "CallETH",
       "BTCx5-USDC",
       "ETHx5-USDC",
       "InsurBTC",
-      "InsurETH",
-      "StabBTC",
       "StabETH",
       "InsurLINK",
       "CallLINK",
@@ -32,7 +33,6 @@ module.exports = async (done) => {
       "N225x5-USDC",
       "FTSEx5-USDC",
       "SynthGAS",
-      "BTCx5-USDT",
       "ETHx5-USDT",
       "EURx5-USDT",
       "GBPx5-USDT",
@@ -64,7 +64,12 @@ module.exports = async (done) => {
       console.log("Vault created index " + lastVaultIndex);
       const vaultAddress = await vaultFactory.getVault.call(lastVaultIndex);
       console.log("Vault created " + vaultAddress);
-      await (await Vault.at(vaultAddress)).initialize();
+      try {
+        await (await Vault.at(vaultAddress)).initialize();
+      } catch {
+        // second try if the first is failed
+        await (await Vault.at(vaultAddress)).initialize();
+      }
       console.log("Vault initialized " + vaultAddress);
     } catch(e) {
       console.log(e);

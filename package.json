@@ -1,6 +1,6 @@
 {
   "name": "complifi-protocol",
-  "version": "1.0.0",
+  "version": "1.3.1",
   "description": "",
   "main": "truffle-config.js",
   "directories": {
@@ -23,8 +23,8 @@
   "keywords": [],
   "author": "",
   "license": "GNU General Public License v3.0",
-  "dependencies": {},
   "devDependencies": {
+    "@uniswap/token-lists": "^1.0.0-beta.16",
     "delay": "^4.4.0",
     "@babel/preset-es2015": "^7.0.0-beta.53",
     "@chainlink/contracts": "0.0.9",
@@ -34,6 +34,7 @@
     "@typechain/truffle-v5": "^2.0.2",
     "@typescript-eslint/eslint-plugin": "^3.7.0",
     "@typescript-eslint/parser": "^3.7.0",
+    "@umaprotocol/truffle-ledger-provider": "^1.0.3",
     "axios": "^0.20.0",
     "babel-polyfill": "^6.26.0",
     "babel-register": "^6.26.0",
@@ -54,10 +55,13 @@
     "solc": "0.6.12",
     "solhint": "^3.2.0",
     "solidity-coverage": "^0.7.10",
+    "truffle-hdwallet-provider": "^1.0.17",
     "ts-node": "^9.0.0",
     "typechain": "^2.0.0",
     "typescript": "^3.0.2",
     "web3": "^1.2.11",
-    "truffle": "^5.1.43"
-  }
+    "truffle": "^5.1.43",
+    "ajv": "^7.0.0-beta.0"
+  },
+  "dependencies": {}
 }

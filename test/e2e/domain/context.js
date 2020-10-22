@@ -10,7 +10,7 @@ const VaultFactoryProxy = artifacts.require("VaultFactoryProxy");
 
 const StubDerivative = artifacts.require("StubDerivative");
 const StubFeed = artifacts.require("StubFeed");
-const StubAggregatorProxy = artifacts.require("StubAggregatorProxy");
+const AggregatorProxy = artifacts.require("AggregatorProxy");
 const StubToken = artifacts.require("StubToken");
 const StubCollateralSplit = artifacts.require("StubCollateralSplit");
 
@@ -81,7 +81,7 @@ const createCollateralWith = async (decimal, symbol) => {
 
 const createStubFeed = async (symbol) => {
   const stubFeedPhase = await StubFeed.new();
-  const stubFeed = await StubAggregatorProxy.new(stubFeedPhase.address);
+  const stubFeed = await AggregatorProxy.new(stubFeedPhase.address);
   await get["vaultFactory"].setOracle(web3.utils.keccak256(stubFeed.address), stubFeed.address); //symbol || "STUBFEED"
   get["stubFeed"] = stubFeed;
   get["stubFeedPhase"] = stubFeedPhase;
@@ -138,7 +138,7 @@ const redeemFor = async (user, primaryValue, complementValue) => {
   // const primaryAllowance = (await get["primaryToken"].allowance.call(user, get["vault"].address)).toString();
   // const complementAllowance = (await get["complementToken"].allowance.call(user, get["vault"].address)).toString();
 
-  await get["vault"].redeem(primaryValue.toString(), complementValue.toString(), [0], [0], {from: user});
+  await get["vault"].redeem(primaryValue.toString(), complementValue.toString(), [makeRoundIdForPhase1(1)], [makeRoundIdForPhase1(2)], {from: user});
   //await checkTokensAllowanceAreEqualFor(user, primaryAllowance - primaryValue, complementAllowance - complementValue);
 };
 
@@ -234,8 +234,12 @@ const checkTokensAllowanceAreEqualFor = async (user, primaryAmount, complementAm
   assert.equal((await get["complementToken"].allowance.call(user, get["vault"].address)).toString(), complementAmount.toString());
 };
 
+const settleWithHints = async (startHints, endHints) => {
+  await get["vault"].settle(startHints, endHints);
+}
+
 const settleWithDefaultHints = async (startHints, endHints) => {
-  await get["vault"].settle(startHints || [makeRoundIdForPhase1(1)], endHints || [makeRoundIdForPhase1(2)]);
+  await settleWithHints([makeRoundIdForPhase1(1)], [makeRoundIdForPhase1(2)]);
 }
 
 module.exports = {
@@ -268,4 +272,5 @@ module.exports = {
   checkTokensAreEqualFor,
   checkTokensAllowanceAreEqualFor,
   settleWithDefaultHints,
+  settleWithHints,
 };

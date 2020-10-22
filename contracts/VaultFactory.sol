@@ -31,6 +31,7 @@ contract VaultFactory is OwnableUpgradeSafe {
     IVaultBuilder public vaultBuilder;
     IAddressRegistry public oracleIteratorRegistry;
 
+    /// @notice redeem function can only be called after the end of the Live period + delay
     uint public settlementDelay;
 
     event VaultCreated(bytes32 indexed derivativeSymbol, address vault, address specification);

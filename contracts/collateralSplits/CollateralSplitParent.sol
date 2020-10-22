@@ -20,20 +20,23 @@ abstract contract CollateralSplitParent is ICollateralSplit {
         uint _settleTime,
         uint[] memory _underlyingStartRoundHints,
         uint[] memory _underlyingEndRoundHints)
-    external override virtual view returns(uint _split, int _underlyingStart, int _underlyingEnd) {
+    external override virtual view returns(uint _split, int[] memory _underlyingStarts, int[] memory _underlyingEnds) {
         require(_oracles.length == 1, "More than one oracle");
         require(_oracles[0] != address(0), "Oracle is empty");
         require(_oracleIterators[0] != address(0), "Oracle iterator is empty");
 
+        _underlyingStarts = new int[](1);
+        _underlyingEnds = new int[](1);
+
         IOracleIterator iterator = IOracleIterator(_oracleIterators[0]);
         require(iterator.isOracleIterator(), "Not oracle iterator");
 
-        _underlyingStart = iterator.getUnderlingValue(_oracles[0], _liveTime, _underlyingStartRoundHints);
-        _underlyingEnd = iterator.getUnderlingValue(_oracles[0], _settleTime, _underlyingEndRoundHints);
+        _underlyingStarts[0] = iterator.getUnderlingValue(_oracles[0], _liveTime, _underlyingStartRoundHints);
+        _underlyingEnds[0] = iterator.getUnderlingValue(_oracles[0], _settleTime, _underlyingEndRoundHints);
 
         _split = range(
             splitNominalValue(
-                normalize( _underlyingStart, _underlyingEnd )
+                normalize( _underlyingStarts[0], _underlyingEnds[0] )
             )
         );
     }

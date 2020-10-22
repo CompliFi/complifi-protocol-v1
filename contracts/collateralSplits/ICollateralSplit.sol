@@ -23,8 +23,8 @@ interface ICollateralSplit {
     /// @param _underlyingStartRoundHints specify for each oracle round of the start of Live period
     /// @param _underlyingEndRoundHints specify for each oracle round of the end of Live period
     /// @return _split primary asset class' share of collateral at settlement
-    /// @return _underlyingStart underlying value in the start of Live period
-    /// @return _underlyingEnd underlying value in the end of Live period
+    /// @return _underlyingStarts underlying values in the start of Live period
+    /// @return _underlyingEnds underlying values in the end of Live period
     function split(
         address[] memory _oracles,
         address[] memory _oracleIterators,
@@ -32,5 +32,5 @@ interface ICollateralSplit {
         uint _settleTime,
         uint[] memory _underlyingStartRoundHints,
         uint[] memory _underlyingEndRoundHints)
-    external view returns(uint _split, int _underlyingStart, int _underlyingEnd);
+    external view returns(uint _split, int[] memory _underlyingStarts, int[] memory _underlyingEnds);
 }

@@ -1,7 +1,7 @@
 const OracleIteratorRegistry = artifacts.require("OracleIteratorRegistry");
 const ChainlinkOracleIterator = artifacts.require("ChainlinkOracleIterator");
 const StubFeed = artifacts.require("StubFeed");
-const StubAggregatorProxy = artifacts.require("StubAggregatorProxy");
+const AggregatorProxy = artifacts.require("AggregatorProxy");
 
 const FRACTION_MULTIPLIER = Math.pow(10, 12);
 const NEGATIVE_INFINITY = "-57896044618658097711785492504343953926634992332820282019728792003956564819968";
@@ -28,23 +28,30 @@ contract("Chainlink Oracle Iterator", accounts => {
   });
 
   describe(' with one phase ', function () {
-    let stubFeed, stubAggregatorProxy;
+    let stubFeed, aggregatorProxy;
 
     beforeEach(async () => {
       stubFeed = await StubFeed.new();
-      stubAggregatorProxy = await StubAggregatorProxy.new(stubFeed.address);
+      aggregatorProxy = await AggregatorProxy.new(stubFeed.address);
     });
 
-    it("...should revert if hints empty.", async () => {
+    it("...should revert if incorrect hints amount.", async () => {
       const now = Math.floor(Date.now() / 1000);
 
       await stubFeed.addRound(100, now);
 
       try {
-        await oracleIterator.getUnderlingValue.call(stubAggregatorProxy.address, now + seconds(1), [])
+        await oracleIterator.getUnderlingValue.call(aggregatorProxy.address, now + seconds(1), [])
         assert.fail();
       } catch (err) {
-        assert.ok(/revert Must have hints for all phases/.test(err.message));
+        assert.ok(/revert Wrong number of hints/.test(err.message));
+      }
+
+      try {
+        await oracleIterator.getUnderlingValue.call(aggregatorProxy.address, now + seconds(1), [makeRoundIdForPhase1(1), makeRoundIdForPhase1(1)])
+        assert.fail();
+      } catch (err) {
+        assert.ok(/revert Wrong number of hints/.test(err.message));
       }
     });
 
@@ -52,7 +59,7 @@ contract("Chainlink Oracle Iterator", accounts => {
       const now = Math.floor(Date.now() / 1000);
 
       try {
-        await oracleIterator.getUnderlingValue.call(stubAggregatorProxy.address, now + seconds(1), [makeRoundIdForPhase1(1)])
+        await oracleIterator.getUnderlingValue.call(aggregatorProxy.address, now + seconds(1), [makeRoundIdForPhase1(1)]);
         assert.fail();
       } catch (err) {
         assert.ok(/revert No data present/.test(err.message));
@@ -65,13 +72,12 @@ contract("Chainlink Oracle Iterator", accounts => {
       await stubFeed.addRound(100, now);
 
       try {
-        await oracleIterator.getUnderlingValue.call(stubAggregatorProxy.address, now + seconds(1), [0])
+        await oracleIterator.getUnderlingValue.call(aggregatorProxy.address, now + seconds(1), [0])
         assert.fail();
       } catch (err) {
         assert.ok(/revert Zero hint/.test(err.message));
       }
     });
-
 
     it("...should return answer if next round existed.", async () => {
       const now = Math.floor(Date.now() / 1000);
@@ -81,7 +87,7 @@ contract("Chainlink Oracle Iterator", accounts => {
 
       assert.equal(100,
         await oracleIterator.getUnderlingValue.call(
-          stubAggregatorProxy.address,
+          aggregatorProxy.address,
           now + seconds(1),
           [makeRoundIdForPhase1(1)]));
     });
@@ -93,22 +99,26 @@ contract("Chainlink Oracle Iterator", accounts => {
 
       assert.equal(200,
         await oracleIterator.getUnderlingValue.call(
-          stubAggregatorProxy.address,
+          aggregatorProxy.address,
           now + seconds(2),
           [makeRoundIdForPhase1(1)]));
     });
 
-    it("...should return minus infinity if all rounds in future.", async () => {
+    it("...should revert if all rounds in future.", async () => {
       const now = Math.floor(Date.now() / 1000);
 
       await stubFeed.addRound(100, now + seconds(1));
       await stubFeed.addRound(101, now + seconds(2));
 
-      assert.equal(NEGATIVE_INFINITY,
+      try {
         await oracleIterator.getUnderlingValue.call(
-          stubAggregatorProxy.address,
+          aggregatorProxy.address,
           now,
-          [makeRoundIdForPhase1(1)]));
+          [makeRoundIdForPhase1(1)])
+        assert.fail();
+      } catch (err) {
+        assert.ok(/revert Incorrect hint/.test(err.message));
+      }
     });
 
     it("...should return answer if last round with right timestamp.", async () => {
@@ -120,7 +130,7 @@ contract("Chainlink Oracle Iterator", accounts => {
 
       assert.equal(102,
         (await oracleIterator.getUnderlingValue.call(
-          stubAggregatorProxy.address,
+          aggregatorProxy.address,
           now + seconds(3),
           [makeRoundIdForPhase1(3)])).toString());
     });
@@ -133,7 +143,7 @@ contract("Chainlink Oracle Iterator", accounts => {
       await stubFeed.addRound(102, now + seconds(3));
 
       assert.equal(101,
-        (await oracleIterator.getUnderlingValue.call(stubAggregatorProxy.address, now + seconds(2),
+        (await oracleIterator.getUnderlingValue.call(aggregatorProxy.address, now + seconds(2),
           [makeRoundIdForPhase1(2)])).toString());
     });
 
@@ -145,7 +155,7 @@ contract("Chainlink Oracle Iterator", accounts => {
       await stubFeed.addRound(102, now + seconds(3));
 
       try {
-        await oracleIterator.getUnderlingValue.call(stubAggregatorProxy.address, now + seconds(3), [makeRoundIdForPhase1(1)])
+        await oracleIterator.getUnderlingValue.call(aggregatorProxy.address, now + seconds(3), [makeRoundIdForPhase1(1)])
         assert.fail();
       } catch (err) {
         assert.ok(/revert Later round exists/.test(err.message));
@@ -154,51 +164,34 @@ contract("Chainlink Oracle Iterator", accounts => {
   });
 
   describe(' with many phases ', function () {
-    let stubFeed1, stubFeed2, stubFeed3, stubAggregatorProxy;
+    let stubFeed1, stubFeed2, stubFeed3, aggregatorProxy;
 
     beforeEach(async () => {
       stubFeed1 = await StubFeed.new();
       stubFeed2 = await StubFeed.new();
       stubFeed3 = await StubFeed.new();
-      stubAggregatorProxy = await StubAggregatorProxy.new(stubFeed1.address);
-      await stubAggregatorProxy.proposeAggregator(stubFeed2.address);
-      await stubAggregatorProxy.confirmAggregator(stubFeed2.address);
-      await stubAggregatorProxy.proposeAggregator(stubFeed3.address);
-      await stubAggregatorProxy.confirmAggregator(stubFeed3.address);
+      aggregatorProxy = await AggregatorProxy.new(stubFeed1.address);
+      await aggregatorProxy.proposeAggregator(stubFeed2.address);
+      await aggregatorProxy.confirmAggregator(stubFeed2.address);
+      await aggregatorProxy.proposeAggregator(stubFeed3.address);
+      await aggregatorProxy.confirmAggregator(stubFeed3.address);
     });
 
-    it("...should revert if other feeds empty.", async () => {
+    it("...should revert if not latest phase in hint.", async () => {
       const now = Math.floor(Date.now() / 1000);
 
-      await stubFeed1.addRound(100, now + seconds(1));
+      await stubFeed1.addRound(101, now);
+      await stubFeed1.addRound(110, now + seconds(2));
+      await stubFeed2.addRound(102, now + seconds(1));
+      await stubFeed2.addRound(120, now + seconds(3));
+      await stubFeed3.addRound(1031, now);
+      await stubFeed3.addRound(1032, now + seconds(4));
 
       try {
-        await oracleIterator.getUnderlingValue.call(stubAggregatorProxy.address, now + seconds(1), [
-          makeRoundIdForPhase1(1),
-          makeRoundIdForPhase2(1),
-          makeRoundIdForPhase3(1),
-        ])
+        await oracleIterator.getUnderlingValue.call(aggregatorProxy.address, now + seconds(1), [makeRoundIdForPhase1(2)])
         assert.fail();
       } catch (err) {
-        assert.ok(/revert No data present/.test(err.message));
-      }
-    });
-
-    it("...should revert if not enough hints.", async () => {
-      const now = Math.floor(Date.now() / 1000);
-
-      await stubFeed1.addRound(100, now + seconds(1));
-      await stubFeed2.addRound(100, now + seconds(1));
-      await stubFeed3.addRound(100, now + seconds(1));
-
-      try {
-        await oracleIterator.getUnderlingValue.call(stubAggregatorProxy.address, now + seconds(1), [
-          makeRoundIdForPhase1(1),
-          makeRoundIdForPhase2(1),
-        ])
-        assert.fail();
-      } catch (err) {
-        assert.ok(/revert Must have hints for all phases/.test(err.message));
+        assert.ok(/revert Wrong hint phase/.test(err.message));
       }
     });
 
@@ -209,16 +202,14 @@ contract("Chainlink Oracle Iterator", accounts => {
       await stubFeed1.addRound(110, now + seconds(2));
       await stubFeed2.addRound(102, now + seconds(1));
       await stubFeed2.addRound(120, now + seconds(3));
-      await stubFeed3.addRound(103, now);
-      await stubFeed3.addRound(130, now + seconds(4));
+      await stubFeed3.addRound(1031, now);
+      await stubFeed3.addRound(1032, now + seconds(4));
 
-      assert.equal(102,
+      assert.equal(1031,
         await oracleIterator.getUnderlingValue.call(
-          stubAggregatorProxy.address,
+          aggregatorProxy.address,
           now + seconds(1),
           [
-            makeRoundIdForPhase1(1),
-            makeRoundIdForPhase2(1),
             makeRoundIdForPhase3(1),
           ]));
     });
@@ -229,85 +220,37 @@ contract("Chainlink Oracle Iterator", accounts => {
       await stubFeed1.addRound(101, now);
       await stubFeed1.addRound(110, now + seconds(2));
       await stubFeed2.addRound(102, now + seconds(1));
-      await stubFeed3.addRound(103, now);
+      await stubFeed3.addRound(1031, now);
 
-      assert.equal(102,
+      assert.equal(1031,
         await oracleIterator.getUnderlingValue.call(
-          stubAggregatorProxy.address,
+          aggregatorProxy.address,
           now + seconds(1),
           [
-            makeRoundIdForPhase1(1),
-            makeRoundIdForPhase2(1),
             makeRoundIdForPhase3(1),
           ]));
-    });
-
-    it("...should return answer if one feed in future.", async () => {
-      const now = Math.floor(Date.now() / 1000);
-
-      await stubFeed1.addRound(101, now);
-      await stubFeed1.addRound(110, now + seconds(2));
-      await stubFeed2.addRound(102, now + seconds(1));
-      await stubFeed3.addRound(103, now + seconds(2));
-      await stubFeed3.addRound(103, now + seconds(3));
-
-      assert.equal(102,
-        await oracleIterator.getUnderlingValue.call(
-          stubAggregatorProxy.address,
-          now + seconds(1),
-          [
-            makeRoundIdForPhase1(1),
-            makeRoundIdForPhase2(1),
-            makeRoundIdForPhase3(1),
-          ]));
-    });
-
-    it("...should revert if one feed in future with wrong hint.", async () => {
-      const now = Math.floor(Date.now() / 1000);
-
-      await stubFeed1.addRound(101, now);
-      await stubFeed1.addRound(110, now + seconds(2));
-      await stubFeed2.addRound(102, now + seconds(1));
-      await stubFeed3.addRound(103, now + seconds(2));
-      await stubFeed3.addRound(103, now + seconds(3));
-
-      try {
-        await oracleIterator.getUnderlingValue.call(
-          stubAggregatorProxy.address,
-          now,
-          [
-            makeRoundIdForPhase1(1),
-            makeRoundIdForPhase2(1),
-            makeRoundIdForPhase3(2),
-          ])
-        assert.fail();
-      } catch (err) {
-        assert.ok(/revert Earlier round exists/.test(err.message));
-      }
     });
 
     it("...should return answer if last round with right timestamp.", async () => {
       const now = Math.floor(Date.now() / 1000);
 
-      await stubFeed1.addRound(100, now + seconds(1));
-      await stubFeed1.addRound(101, now + seconds(2));
-      await stubFeed1.addRound(101, now + seconds(4));
+      await stubFeed1.addRound(1011, now + seconds(1));
+      await stubFeed1.addRound(1012, now + seconds(2));
+      await stubFeed1.addRound(1013, now + seconds(4));
 
-      await stubFeed2.addRound(100, now + seconds(1));
-      await stubFeed2.addRound(101, now + seconds(2));
-      await stubFeed2.addRound(102, now + seconds(5));
+      await stubFeed2.addRound(1021, now + seconds(1));
+      await stubFeed2.addRound(1022, now + seconds(2));
+      await stubFeed2.addRound(1023, now + seconds(5));
 
-      await stubFeed3.addRound(100, now + seconds(1));
-      await stubFeed3.addRound(101, now + seconds(2));
-      await stubFeed3.addRound(103, now + seconds(3));
+      await stubFeed3.addRound(1031, now + seconds(1));
+      await stubFeed3.addRound(1032, now + seconds(2));
+      await stubFeed3.addRound(1033, now + seconds(3));
 
-      assert.equal(103,
+      assert.equal(1033,
         (await oracleIterator.getUnderlingValue.call(
-          stubAggregatorProxy.address,
+          aggregatorProxy.address,
           now + seconds(3),
           [
-            makeRoundIdForPhase1(2),
-            makeRoundIdForPhase2(2),
             makeRoundIdForPhase3(3),
           ])).toString());
     });
@@ -315,23 +258,21 @@ contract("Chainlink Oracle Iterator", accounts => {
     it("...should return answer if pre-last round with right timestamp.", async () => {
       const now = Math.floor(Date.now() / 1000);
 
-      await stubFeed1.addRound(100, now + seconds(0));
-      await stubFeed1.addRound(101, now + seconds(1));
-      await stubFeed1.addRound(102, now + seconds(3));
+      await stubFeed1.addRound(1011, now + seconds(0));
+      await stubFeed1.addRound(1012, now + seconds(1));
+      await stubFeed1.addRound(1013, now + seconds(3));
 
-      await stubFeed2.addRound(100, now + seconds(1));
-      await stubFeed2.addRound(102, now + seconds(2));
-      await stubFeed2.addRound(102, now + seconds(3));
+      await stubFeed2.addRound(1021, now + seconds(1));
+      await stubFeed2.addRound(1022, now + seconds(2));
+      await stubFeed2.addRound(1023, now + seconds(3));
 
-      await stubFeed3.addRound(100, now + seconds(0));
-      await stubFeed3.addRound(103, now + seconds(1));
-      await stubFeed3.addRound(102, now + seconds(3));
+      await stubFeed3.addRound(1031, now + seconds(0));
+      await stubFeed3.addRound(1032, now + seconds(1));
+      await stubFeed3.addRound(1033, now + seconds(3));
 
-      assert.equal(102,
-        (await oracleIterator.getUnderlingValue.call(stubAggregatorProxy.address, now + seconds(2),
+      assert.equal(1032,
+        (await oracleIterator.getUnderlingValue.call(aggregatorProxy.address, now + seconds(2),
           [
-            makeRoundIdForPhase1(2),
-            makeRoundIdForPhase2(2),
             makeRoundIdForPhase3(2)
           ])).toString());
     });

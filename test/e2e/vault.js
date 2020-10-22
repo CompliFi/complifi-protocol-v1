@@ -122,8 +122,19 @@ contract("Vault", accounts => {
         const livePeriod = (await i.get["specification"].livePeriod.call()).toNumber();
         assert.equal(settleTime, initializationTime + mintingPeriod + livePeriod);
 
-        assert.equal((await i.get["vault"].underlyingStart.call()).toString(), NEGATIVE_INFINITY);
-        assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), NEGATIVE_INFINITY);
+        try {
+          await i.get["vault"].underlyingStarts.call(0)
+          assert.fail();
+        } catch (err) {
+          assert.ok(/invalid opcode/.test(err.message));
+        }
+
+        try {
+          await i.get["vault"].underlyingEnds.call(0)
+          assert.fail();
+        } catch (err) {
+          assert.ok(/invalid opcode/.test(err.message));
+        }
 
         assert.equal(await i.get["vault"].state.call(), STAGE.Minting);
 
@@ -169,8 +180,8 @@ contract("Vault", accounts => {
 
         await i.settleWithDefaultHints();
 
-        assert.equal((await i.get["vault"].underlyingStart.call()).toNumber(), startValue);
-        assert.equal((await i.get["vault"].underlyingEnd.call()).toNumber(), endValue);
+        assert.equal((await i.get["vault"].underlyingStarts.call(0)).toNumber(), startValue);
+        assert.equal((await i.get["vault"].underlyingEnds.call(0)).toNumber(), endValue);
 
         assert.equal(await i.get["vault"].state.call(), STAGE.Settled);
 
@@ -196,8 +207,8 @@ contract("Vault", accounts => {
         increaseTime(days(28));
         await i.settleWithDefaultHints();
 
-        assert.equal((await i.get["vault"].underlyingStart.call()).toString(), startValue);
-        assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), endValue);
+        assert.equal((await i.get["vault"].underlyingStarts.call(0)).toString(), startValue);
+        assert.equal((await i.get["vault"].underlyingEnds.call(0)).toString(), endValue);
 
         assert.equal((await i.get["vault"].primaryConversion.call()).toString(), primaryConversion);
         assert.equal((await i.get["vault"].complementConversion.call()).toString(), complementConversion);
@@ -252,9 +263,6 @@ contract("Vault", accounts => {
         increaseTime(days(7));
         await i.get["vault"].live();
 
-        console.log(await i.get["vault"].owner());
-        console.log(i.get["vaultFactory"].address);
-
         await i.get["vaultFactory"].pauseVault(i.get["vault"].address);
 
         increaseTime(days(21));
@@ -284,9 +292,6 @@ contract("Vault", accounts => {
 
         increaseTime(days(7));
         await i.get["vault"].live();
-
-        console.log(await i.get["vault"].owner());
-        console.log(i.get["vaultFactory"].address);
 
         increaseTime(days(21));
 
@@ -575,8 +580,8 @@ contract("Vault", accounts => {
         increaseTime(days(21));
         await i.settleWithDefaultHints();
 
-        assert.equal((await i.get["vault"].underlyingStart.call()).toString(), 100);
-        assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), 110);
+        assert.equal((await i.get["vault"].underlyingStarts.call(0)).toString(), 100);
+        assert.equal((await i.get["vault"].underlyingEnds.call(0)).toString(), 110);
       });
 
       it("...should revert if underlying start is zero", async () => {
@@ -588,7 +593,7 @@ contract("Vault", accounts => {
         increaseTime(days(21));
 
         try {
-          await i.settleWithDefaultHints([makeRoundIdForPhase1(1)], [makeRoundIdForPhase1(1)]);
+          await i.settleWithHints([makeRoundIdForPhase1(1)], [makeRoundIdForPhase1(1)]);
           assert.fail();
         } catch (err) {
           assert.ok(/revert u_0 is less or equal zero/.test(err.message));
@@ -619,8 +624,8 @@ contract("Vault", accounts => {
 
         await i.settleWithDefaultHints();
 
-        assert.equal((await i.get["vault"].underlyingStart.call()).toString(), 100);
-        assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), 0);
+        assert.equal((await i.get["vault"].underlyingStarts.call(0)).toString(), 100);
+        assert.equal((await i.get["vault"].underlyingEnds.call(0)).toString(), 0);
       });
 
       it("...should underlying end be negative value if oracle is negative value", async () => {
@@ -633,8 +638,8 @@ contract("Vault", accounts => {
         increaseTime(days(21));
         await i.settleWithDefaultHints();
 
-        assert.equal((await i.get["vault"].underlyingStart.call()).toString(), 100);
-        assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), -100);
+        assert.equal((await i.get["vault"].underlyingStarts.call(0)).toString(), 100);
+        assert.equal((await i.get["vault"].underlyingEnds.call(0)).toString(), -100);
       });
 
       it("...should underlying end be equal to underlying start if oracle value timestamp bigger than settled", async () => {
@@ -647,10 +652,10 @@ contract("Vault", accounts => {
         await i.get["vault"].live();
 
         increaseTime(days(21));
-        await i.settleWithDefaultHints([makeRoundIdForPhase1(1)], [makeRoundIdForPhase1(1)]);
+        await i.settleWithHints([makeRoundIdForPhase1(1)], [makeRoundIdForPhase1(1)]);
 
-        assert.equal((await i.get["vault"].underlyingStart.call()).toString(), 100);
-        assert.equal((await i.get["vault"].underlyingEnd.call()).toString(), 100);
+        assert.equal((await i.get["vault"].underlyingStarts.call(0)).toString(), 100);
+        assert.equal((await i.get["vault"].underlyingEnds.call(0)).toString(), 100);
       });
     });
   });

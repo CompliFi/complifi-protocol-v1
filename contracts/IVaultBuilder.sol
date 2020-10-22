@@ -2,8 +2,6 @@
 
 pragma solidity >=0.4.21 <0.7.0;
 
-import "./Vault.sol";
-
 interface IVaultBuilder {
     function buildVault(
         uint _initializationTime,

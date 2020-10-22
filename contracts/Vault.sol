@@ -25,14 +25,13 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
     using SafeMath for uint8;
 
     uint public constant FRACTION_MULTIPLIER = 10**12;
-    int public constant NEGATIVE_INFINITY = type(int256).min;
 
     enum State { Created, Minting, Live, Settled }
 
     event StateChanged(State oldState, State newState);
     event MintingStateSet(address primaryToken, address complementToken);
     event LiveStateSet();
-    event SettledStateSet(int underlyingStart, int underlyingEnd, uint primaryConversion, uint complementConversion);
+    event SettledStateSet(int[] underlyingStarts, int[] underlyingEnds, uint primaryConversion, uint complementConversion);
     event Minted(uint minted, uint collateral, uint fee);
     event Refunded(uint tokenAmount, uint collateral);
     event Redeemed(uint tokenAmount, uint conversion, uint collateral, bool isPrimary);
@@ -44,12 +43,13 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
     /// @notice end of live period
     uint public settleTime;
 
+    /// @notice redeem function can only be called after the end of the Live period + delay
     uint public settlementDelay;
 
     /// @notice underlying value at the start of live period
-    int public underlyingStart;
+    int[] public underlyingStarts;
     /// @notice underlying value at the end of live period
-    int public underlyingEnd;
+    int[] public underlyingEnds;
 
     /// @notice primary token conversion rate multiplied by 10 ^ 12
     uint public primaryConversion;
@@ -132,9 +132,6 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
 
         changeState(State.Created);
 
-        underlyingStart = NEGATIVE_INFINITY;
-        underlyingEnd = NEGATIVE_INFINITY;
-
         authorFeeLimit = _authorFeeLimit;
 
         liveTime = initializationTime + derivativeSpecification.mintingPeriod();
@@ -183,9 +180,10 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
 
 
     /// @notice Switch to Settled state if appropriate time threshold is passed and
-    /// set underlyingStart value and set underlyingEnd value,
+    /// set underlyingStarts value and set underlyingEnds value,
     /// calculate primaryConversion and complementConversion params
     /// @dev Reverts if underlyingStart or underlyingEnd are not available
+    /// Vault cannot settle when it paused
     function settle(uint[] memory _underlyingStartRoundHints, uint[] memory _underlyingEndRoundHints)
     public whenNotPaused() {
         if(state != State.Live) {
@@ -196,7 +194,7 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         changeState(State.Settled);
 
         uint split;
-        (split, underlyingStart, underlyingEnd) = collateralSplit.split(
+        (split, underlyingStarts, underlyingEnds) = collateralSplit.split(
             oracles, oracleIterators, liveTime, settleTime, _underlyingStartRoundHints, _underlyingEndRoundHints
         );
         split = range(split);
@@ -210,7 +208,7 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
             complementConversion = collectedCollateral.mul(FRACTION_MULTIPLIER).sub(primaryCollateralPortion).div(mintedPrimaryTokenAmount);
         }
 
-        emit SettledStateSet(underlyingStart, underlyingEnd, primaryConversion, complementConversion);
+        emit SettledStateSet(underlyingStarts, underlyingEnds, primaryConversion, complementConversion);
     }
 
     function range(uint _split) public pure returns(uint) {

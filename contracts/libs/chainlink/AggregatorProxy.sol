@@ -9,7 +9,7 @@ import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV2V3Interface.sol";
  * CurrentAnwerInterface but delegates where it reads from to the owner, who is
  * trusted to update it.
  */
-contract StubAggregatorProxy is AggregatorV2V3Interface, Owned {
+contract AggregatorProxy is AggregatorV2V3Interface, Owned {
 
   struct Phase {
     uint16 id;
