@@ -1,6 +1,6 @@
 // "SPDX-License-Identifier: GNU General Public License v3.0"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 
@@ -182,24 +182,24 @@ contract VaultFactory is OwnableUpgradeSafe {
         IPausableVault(_vault).unpause();
     }
 
-    function setDerivativeSpecification(bytes32 _key, address _value) external {
-        derivativeSpecificationRegistry.set(_key, _value);
+    function setDerivativeSpecification(address _value) external {
+        derivativeSpecificationRegistry.set(_value);
     }
 
-    function setOracle(bytes32 _key, address _value) external {
-        oracleRegistry.set(_key, _value);
+    function setOracle(address _value) external {
+        oracleRegistry.set(_value);
     }
 
-    function setOracleIterator(bytes32 _key, address _value) external {
-        oracleIteratorRegistry.set(_key, _value);
+    function setOracleIterator(address _value) external {
+        oracleIteratorRegistry.set(_value);
     }
 
-    function setCollateralToken(bytes32 _key, address _value) external {
-        collateralTokenRegistry.set(_key, _value);
+    function setCollateralToken(address _value) external {
+        collateralTokenRegistry.set(_value);
     }
 
-    function setCollateralSplit(bytes32 _key, address _value) external {
-        collateralSplitRegistry.set(_key, _value);
+    function setCollateralSplit(address _value) external {
+        collateralSplitRegistry.set(_value);
     }
 
     /// @notice Returns vault based on internal index

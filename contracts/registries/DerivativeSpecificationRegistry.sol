@@ -1,33 +1,39 @@
 // "SPDX-License-Identifier: GNU General Public License v3.0"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.6.12;
 
 import "./AddressRegistryParent.sol";
 import "../IDerivativeSpecification.sol";
 
 contract DerivativeSpecificationRegistry is AddressRegistryParent {
+    mapping(bytes32 => bool) internal _uniqueFieldsHashMap;
+
+    function generateKey(address _value) public override view returns(bytes32 _key){
+        return keccak256(abi.encodePacked(IDerivativeSpecification(_value).symbol()));
+    }
+
     function _check(bytes32 _key, address _value) internal virtual override{
         super._check(_key, _value);
         IDerivativeSpecification derivative = IDerivativeSpecification(_value);
         require(derivative.isDerivativeSpecification(), "Should be derivative specification");
 
-        require(_key == keccak256(abi.encodePacked(derivative.symbol())), "Incorrect hash");
+        bytes32 uniqueFieldsHash =
+            keccak256(
+                abi.encode(
+                    derivative.oracleSymbols(),
+                    derivative.oracleIteratorSymbols(),
+                    derivative.collateralTokenSymbol(),
+                    derivative.collateralSplitSymbol(),
+                    derivative.mintingPeriod(),
+                    derivative.livePeriod(),
+                    derivative.primaryNominalValue(),
+                    derivative.complementNominalValue(),
+                    derivative.authorFee()
+                )
+            );
 
-        for (uint i = 0; i < _keys.length; i++) {
-            bytes32 key = _keys[i];
-            IDerivativeSpecification value = IDerivativeSpecification(_registry[key]);
-            if( keccak256(abi.encodePacked(derivative.oracleSymbols())) == keccak256(abi.encodePacked(value.oracleSymbols())) &&
-                keccak256(abi.encodePacked(derivative.oracleIteratorSymbols())) == keccak256(abi.encodePacked(value.oracleIteratorSymbols())) &&
-                derivative.collateralTokenSymbol() == value.collateralTokenSymbol() &&
-                derivative.collateralSplitSymbol() == value.collateralSplitSymbol() &&
-                derivative.mintingPeriod() == value.mintingPeriod() &&
-                derivative.livePeriod() == value.livePeriod() &&
-                derivative.primaryNominalValue() == value.primaryNominalValue() &&
-                derivative.complementNominalValue() == value.complementNominalValue() &&
-                derivative.authorFee() == value.authorFee() ) {
+        require(!_uniqueFieldsHashMap[uniqueFieldsHash], "Same spec params");
 
-                revert("Same spec params");
-            }
-        }
+        _uniqueFieldsHashMap[uniqueFieldsHash] = true;
     }
 }

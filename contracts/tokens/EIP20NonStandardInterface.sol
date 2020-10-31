@@ -1,6 +1,6 @@
 // "SPDX-License-Identifier: GNU General Public License v3.0"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.6.12;
 
 /// @title EIP20NonStandardInterface
 /// @dev Version of ERC20 with no return values for `transfer` and `transferFrom`

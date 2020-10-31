@@ -31,7 +31,7 @@ module.exports = async (done) => {
       console.log("Deploying specification " + symbol);
       const derivative = await DerivativeSpecification.new(...params);
       console.log("Adding specification " + derivative.address);
-      const result = await vaultFactory.setDerivativeSpecification(web3.utils.keccak256(symbol), derivative.address);
+      const result = await vaultFactory.setDerivativeSpecification(derivative.address);
       console.log(`Added specification ${derivative.address} as ${symbol} in ${result.tx}`);
     }
 

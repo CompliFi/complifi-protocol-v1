@@ -1,6 +1,6 @@
 // "SPDX-License-Identifier: GNU General Public License v3.0"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
@@ -16,7 +16,7 @@ contract ChainlinkOracleIterator is IOracleIterator {
         return true;
     }
 
-    function symbol() external override view returns (string memory) {
+    function symbol() external override pure returns (string memory) {
         return "ChainlinkIterator";
     }
 
@@ -40,19 +40,15 @@ contract ChainlinkOracleIterator is IOracleIterator {
         uint256 hintTimestamp;
         (,hintAnswer,,hintTimestamp,) = oracle.getRoundData(roundHint);
 
-        if(hintTimestamp == 0 || hintTimestamp > _timestamp) {
-            revert('Incorrect hint');
-        }
+        require(hintTimestamp > 0 && hintTimestamp <= _timestamp, 'Incorrect hint');
 
         uint256 timestampNext = 0;
         if(roundHint + 1 <= latestRoundId) {
             (,,,timestampNext,) = oracle.getRoundData(roundHint + 1);
-            if(timestampNext > 0 && timestampNext <= _timestamp) {
-                revert("Later round exists");
-            }
+            require(timestampNext == 0 || timestampNext > _timestamp, "Later round exists");
         }
 
-        if(timestampNext == 0 || (timestampNext > 0 && timestampNext > _timestamp)){
+        if(timestampNext == 0 || timestampNext > _timestamp){
             return hintAnswer;
         }
 

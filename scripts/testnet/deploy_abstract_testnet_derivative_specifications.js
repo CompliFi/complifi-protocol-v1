@@ -25,7 +25,7 @@ module.exports = async (done) => {
       const TOKEN = await StubToken.new("Collateral " + symbol, symbol, decimals);
       console.log("Created token " + TOKEN.address);
       console.log("Adding token... ");
-      const result = await vaultFactory.setCollateralToken(web3.utils.keccak256(TOKEN.address), TOKEN.address);
+      const result = await vaultFactory.setCollateralToken(TOKEN.address);
       console.log(`Added token ${TOKEN.address} as ${symbol} in ${result.tx}`);
       return TOKEN.address;
     }
@@ -42,7 +42,7 @@ module.exports = async (done) => {
       console.log("Adding round " + answer + " at " + currentTime);
       await FEED.addRound(answer, currentTime);
       console.log("Adding feed... ");
-      const result = await vaultFactory.setOracle(web3.utils.keccak256(FEED.address), FEED.address);
+      const result = await vaultFactory.setOracle(FEED.address);
       console.log(`Added feed ${FEED.address} as ${symbol} in ${result.tx}`);
       return FEED.address;
     }
@@ -52,7 +52,7 @@ module.exports = async (done) => {
       console.log("Deploying new specification " + symbol + ' with params: ' + params.toString());
       const derivative = await DerivativeSpecification.new(...params);
       console.log("Adding specification " + derivative.address);
-      const result = await vaultFactory.setDerivativeSpecification(web3.utils.keccak256(symbol), derivative.address);
+      const result = await vaultFactory.setDerivativeSpecification(derivative.address);
       console.log(`Added specification ${derivative.address} as ${symbol} in ${result.tx}`);
     }
 

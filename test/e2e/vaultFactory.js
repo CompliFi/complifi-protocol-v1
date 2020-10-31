@@ -19,17 +19,17 @@ contract("VaultFactory", accounts => {
     vaultFactory = await VaultFactory.at((await VaultFactoryProxy.deployed()).address);
 
     let stubFeed = await StubFeed.new();
-    await vaultFactory.setOracle(web3.utils.keccak256(stubFeed.address), stubFeed.address);
+    await vaultFactory.setOracle(stubFeed.address);
 
     let collateralToken = await StubToken.new("Stub", "STUB", 0);
-    await vaultFactory.setCollateralToken(web3.utils.keccak256(collateralToken.address), collateralToken.address);
+    await vaultFactory.setCollateralToken(collateralToken.address);
 
     const specification = await StubDerivative.new(
       [web3.utils.keccak256(stubFeed.address)],
       [web3.utils.keccak256("ChainlinkIterator")],
       web3.utils.keccak256(collateralToken.address),
       {from: accounts[0]});
-    await vaultFactory.setDerivativeSpecification(web3.utils.keccak256("STUB"), specification.address);
+    await vaultFactory.setDerivativeSpecification(specification.address);
   });
 
   it("...should be initialised.", async () => {

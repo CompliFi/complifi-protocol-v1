@@ -15,6 +15,7 @@ contract("x1 Derivatives", accounts => {
   it("...should calculate split function.", async () => {
     const callContract = async (value) => await callDerivative(collateralSplit.splitNominalValue, value);
 
+    assert.equal(await callContract(-1), calcSplit(-1), "-1");
     assert.equal(await callContract(-0.9999), calcSplit(-0.9999), "-0.9999");
     assert.equal(await callContract(-0.8), calcSplit(-0.8), "-0.8");
     assert.equal(await callContract(-0.6), calcSplit(-0.6), "-0.6");
@@ -29,6 +30,8 @@ contract("x1 Derivatives", accounts => {
     assert.equal(await callContract(0.5), calcSplit(0.5), "0.5");
     assert.equal(await callContract(0.7), calcSplit(0.7), "0.7");
     assert.equal(await callContract(0.9999), calcSplit(0.9999), "0.9999");
+    assert.equal(await callContract(1), calcSplit(1), "1");
+    assert.equal(await callContract(10), calcSplit(10), "10");
   });
 });
 
@@ -40,5 +43,5 @@ function trunc4(value) {
 }
 
 async function callDerivative(func, value){
-  return await func.call(value * FRACTION_MULTIPLIER);
+  return (await func.call(value * FRACTION_MULTIPLIER)).toNumber();
 }

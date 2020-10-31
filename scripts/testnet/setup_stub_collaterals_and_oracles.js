@@ -20,7 +20,7 @@ module.exports = async (done) => {
     const setCollateralToken = async (symbol) => {
       const stubToken = await StubToken.new("Stub " + symbol, symbol, 0);
       console.log("Created stub collateral token " + symbol + " " + stubToken.address);
-      await vaultFactory.setCollateralToken(web3.utils.keccak256(stubToken.address), stubToken.address);
+      await vaultFactory.setCollateralToken(stubToken.address);
       console.log("Set stub collateral token " + symbol + " " + stubToken.address);
     }
 
@@ -33,7 +33,7 @@ module.exports = async (done) => {
     const setOracle = async (symbol) => {
       const stubFeed = await StubFeed.new();
       console.log("Created stub feed " + symbol + " " + stubFeed.address);
-      await vaultFactory.setOracle(web3.utils.keccak256(stubFeed.address), stubFeed.address);
+      await vaultFactory.setOracle(stubFeed.address);
       console.log("Set stub feed " + symbol + " " + stubFeed.address);
     }
 

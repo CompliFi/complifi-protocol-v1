@@ -237,14 +237,14 @@ contract("Vault", accounts => {
           await i.settleWithDefaultHints();
           assert.fail();
         } catch (err) {
-          assert.ok(/revert Delayed settlement/.test(err.message));
+          assert.ok(/revert Incorrect time/.test(err.message));
         }
 
         try {
           await i.redeemFor(user, 1, 0);
           assert.fail();
         } catch (err) {
-          assert.ok(/revert Delayed settlement/.test(err.message));
+          assert.ok(/revert Incorrect time/.test(err.message));
         }
 
         increaseTime(hours(3));

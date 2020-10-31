@@ -1,6 +1,6 @@
 // "SPDX-License-Identifier: GNU General Public License v3.0"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.6.12;
 
 import "./Vault.sol";
 import "./IVaultBuilder.sol";
@@ -19,7 +19,7 @@ contract VaultBuilder is IVaultBuilder{
         address _feeLogger,
         uint _authorFeeLimit,
         uint _settlementDelay
-    ) external override returns(address){
+    ) public override returns(address){
         Vault vault = new Vault(
             _initializationTime,
             _protocolFee,

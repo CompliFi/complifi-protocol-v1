@@ -45,7 +45,7 @@ const registerStubSpecification = async (name, author, oracle, collateral) => {
     [web3.utils.keccak256("ChainlinkIterator")],
     web3.utils.keccak256(collateral),
     {from: author});
-  await get["vaultFactory"].setDerivativeSpecification(web3.utils.keccak256(name), specification.address);
+  await get["vaultFactory"].setDerivativeSpecification(specification.address);
   get["specification"] = specification;
 };
 
@@ -75,14 +75,14 @@ const createCollateral = async (symbol) => {
 
 const createCollateralWith = async (decimal, symbol) => {
   const stubToken = await StubToken.new("Stub Token", symbol, decimal);
-  await get["vaultFactory"].setCollateralToken(web3.utils.keccak256(stubToken.address), stubToken.address);
+  await get["vaultFactory"].setCollateralToken(stubToken.address);
   get["stubToken"] = stubToken;
 };
 
 const createStubFeed = async (symbol) => {
   const stubFeedPhase = await StubFeed.new();
   const stubFeed = await AggregatorProxy.new(stubFeedPhase.address);
-  await get["vaultFactory"].setOracle(web3.utils.keccak256(stubFeed.address), stubFeed.address); //symbol || "STUBFEED"
+  await get["vaultFactory"].setOracle(stubFeed.address); //symbol || "STUBFEED"
   get["stubFeed"] = stubFeed;
   get["stubFeedPhase"] = stubFeedPhase;
 };

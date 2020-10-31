@@ -27,7 +27,7 @@ module.exports = async (done) => {
       console.log("Adding collateral " + symbol);
       const address = deployConfig[symbol];
       if(address === '0x0') throw "Empty collateral token " + symbol;
-      const result = await vaultFactory.setCollateralToken(web3.utils.keccak256(address), deployConfig[symbol]);
+      const result = await vaultFactory.setCollateralToken(deployConfig[symbol]);
       console.log(`Added collateral ${deployConfig[symbol]} as ${symbol} in ${result.tx}`);
     }
 

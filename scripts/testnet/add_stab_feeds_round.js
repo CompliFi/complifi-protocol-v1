@@ -1,11 +1,8 @@
 'use strict';
 
-const config = require("../../deploy-config.json");
-
 const StubFeed = artifacts.require("StubFeed");
-const OracleRegistry = artifacts.require("OracleRegistry");
 
-const FEEDS = ["ASSET-USD"];
+const FEEDS = ["0x39CAEb369bBE25642De19926f08d7687B46BbE6C"];
 
 const randomRange = (range) => Math.random() * range - range/2;
 
@@ -17,17 +14,9 @@ module.exports = async (done) => {
   console.log("network id:" + networkId);
   console.log("accounts:" + accounts);
 
-  const deployConfig = config[networkId];
-  if(!deployConfig){
-    throw(`${networkId} configuration is absent`);
-  }
-
-  const oracleRegistry = await OracleRegistry.deployed();
-
-  for(const feedSymbol of FEEDS) {
+  for(const feedAddress of FEEDS) {
     try {
-      const feedAddress = await oracleRegistry.get.call(web3.utils.keccak256(deployConfig[feedSymbol]));
-      console.log("Add new round to feed " + feedSymbol + " address " + feedAddress);
+      console.log("Add new round to feed address " + feedAddress);
       const feed = await StubFeed.at(feedAddress);
       const decimals = 6;
       const latestAnswer = await feed.latestAnswer.call() / Math.pow(10, decimals);

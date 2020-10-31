@@ -27,7 +27,7 @@ module.exports = async (done) => {
       console.log("Adding oracle " + symbol);
       const address = deployConfig[symbol];
       if(address === '0x0') throw "Empty oracle " + symbol;
-      const result = await vaultFactory.setOracle(web3.utils.keccak256(address), deployConfig[symbol]);
+      const result = await vaultFactory.setOracle(deployConfig[symbol]);
       console.log(`Added oracle ${deployConfig[symbol]} as ${symbol} in ${result.tx}`);
     }
 

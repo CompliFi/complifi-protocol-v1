@@ -4,6 +4,11 @@ const VaultFactory = artifacts.require("VaultFactory");
 const VaultFactoryProxy = artifacts.require("VaultFactoryProxy");
 const Vault = artifacts.require("Vault");
 
+const paused = parseInt( process.env.DELAY_MS || "5000" );
+
+const delay = require('delay');
+const wait = async (param) => { console.log("Delay " + paused); await delay(paused); return param;};
+
 module.exports = async (done) => {
   const networkType = await web3.eth.net.getNetworkType();
   const networkId = await web3.eth.net.getId();
@@ -59,16 +64,16 @@ module.exports = async (done) => {
   for(const instrument of INSTRUMENTS) {
     try {
       console.log("Creating vault " + instrument + " initialized at " + derivativeCreated);
-      await vaultFactory.createVault(web3.utils.keccak256(instrument), derivativeCreated);
+      await wait(await vaultFactory.createVault(web3.utils.keccak256(instrument), derivativeCreated));
       const lastVaultIndex = await vaultFactory.getLastVaultIndex.call();
       console.log("Vault created index " + lastVaultIndex);
       const vaultAddress = await vaultFactory.getVault.call(lastVaultIndex);
       console.log("Vault created " + vaultAddress);
       try {
-        await (await Vault.at(vaultAddress)).initialize();
+        await wait(await (await Vault.at(vaultAddress)).initialize());
       } catch {
         // second try if the first is failed
-        await (await Vault.at(vaultAddress)).initialize();
+        await wait(await (await Vault.at(vaultAddress)).initialize());
       }
       console.log("Vault initialized " + vaultAddress);
     } catch(e) {

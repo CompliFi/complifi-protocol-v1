@@ -1,6 +1,6 @@
 // "SPDX-License-Identifier: GNU General Public License v3.0"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.6.12;
 
 /// @title Collateral Split interface
 /// @notice Contains mathematical functions used to calculate relative claim
@@ -16,7 +16,7 @@ interface ICollateralSplit {
     /// @notice Symbol of the collateral split
     /// @dev Should be resolved through CollateralSplitRegistry contract
     /// @return collateral split specification symbol
-    function symbol() external view returns (string memory);
+    function symbol() external pure returns (string memory);
 
     /// @notice Calcs primary asset class' share of collateral at settlement.
     /// @dev Returns ranged value between 0 and 1 multiplied by 10 ^ 12

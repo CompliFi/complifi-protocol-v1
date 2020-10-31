@@ -1,6 +1,6 @@
 // "SPDX-License-Identifier: GNU General Public License v3.0"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.6.12;
 
 import "./ITokenBuilder.sol";
 import "./ERC20PresetMinter.sol";
@@ -53,7 +53,7 @@ contract TokenBuilder is ITokenBuilder{
     }
 
     function getCenturyYears(uint _year) internal pure returns(uint) {
-        return _year - (_year / 100 ) * 100;
+        return _year % 100;
     }
 
     function concat(string memory _a, string memory _b) internal pure returns(string memory) {
