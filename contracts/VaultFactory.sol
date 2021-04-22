@@ -1,8 +1,8 @@
-// "SPDX-License-Identifier: GNU General Public License v3.0"
+// "SPDX-License-Identifier: GPL-3.0-or-later"
 
-pragma solidity 0.6.12;
+pragma solidity 0.7.6;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
+import "./libs/@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 
 import "./IDerivativeSpecification.sol";
 import "./registries/IAddressRegistry.sol";
@@ -22,19 +22,23 @@ contract VaultFactory is OwnableUpgradeSafe {
     address public feeLogger;
 
     /// @notice protocol fee multiplied by 10 ^ 12
-    uint public protocolFee;
+    uint256 public protocolFee;
     /// @notice protocol fee receiving wallet
     address public feeWallet;
     /// @notice author above limit fee multiplied by 10 ^ 12
-    uint public authorFeeLimit;
+    uint256 public authorFeeLimit;
 
     IVaultBuilder public vaultBuilder;
     IAddressRegistry public oracleIteratorRegistry;
 
     /// @notice redeem function can only be called after the end of the Live period + delay
-    uint public settlementDelay;
+    uint256 public settlementDelay;
 
-    event VaultCreated(bytes32 indexed derivativeSymbol, address vault, address specification);
+    event VaultCreated(
+        bytes32 indexed derivativeSymbol,
+        address vault,
+        address specification
+    );
 
     /// @notice Initializes vault factory contract storage
     /// @dev Used only once when vault factory is created for the first time
@@ -46,13 +50,12 @@ contract VaultFactory is OwnableUpgradeSafe {
         address _collateralSplitRegistry,
         address _tokenBuilder,
         address _feeLogger,
-        uint _protocolFee,
+        uint256 _protocolFee,
         address _feeWallet,
-        uint _authorFeeLimit,
+        uint256 _authorFeeLimit,
         address _vaultBuilder,
-        uint _settlementDelay
+        uint256 _settlementDelay
     ) external initializer {
-
         __Ownable_init();
 
         setDerivativeSpecificationRegistry(_derivativeSpecificationRegistry);
@@ -77,56 +80,96 @@ contract VaultFactory is OwnableUpgradeSafe {
     /// @notice Creates a new vault based on derivative specification symbol and initialization timestamp
     /// @dev Initialization timestamp allows to target a specific start time for Live period
     /// @param _derivativeSymbolHash a symbol hash which resolves to the derivative specification
-    /// @param _initializationTime vault initialization timestamp
-    function createVault(bytes32 _derivativeSymbolHash, uint _initializationTime) external {
-        IDerivativeSpecification derivativeSpecification = IDerivativeSpecification(
-            derivativeSpecificationRegistry.get(_derivativeSymbolHash));
-        require(address(derivativeSpecification) != address(0), "Specification is absent");
-
-        address collateralToken = collateralTokenRegistry.get(derivativeSpecification.collateralTokenSymbol());
-        address collateralSplit = collateralSplitRegistry.get(derivativeSpecification.collateralSplitSymbol());
-
-        bytes32[] memory oracleSymbols = derivativeSpecification.oracleSymbols();
-        bytes32[] memory oracleIteratorSymbols = derivativeSpecification.oracleIteratorSymbols();
-        require(oracleSymbols.length == oracleIteratorSymbols.length, "Oracles and iterators length");
-
-        address[] memory oracles = new address[](oracleSymbols.length);
-        address[] memory oracleIterators = new address[](oracleIteratorSymbols.length);
-        for(uint i = 0; i < oracleSymbols.length; i++) {
-            address oracle = oracleRegistry.get(oracleSymbols[i]);
-            require(address(oracle) != address(0), "Oracle is absent");
-            oracles[i] = oracle;
-
-            address oracleIterator = oracleIteratorRegistry.get(oracleIteratorSymbols[i]);
-            require(address(oracleIterator) != address(0), "OracleIterator is absent");
-            oracleIterators[i] = oracleIterator;
-        }
-
-        require(_initializationTime > 0, "Zero initialization time");
-
-        address vault = vaultBuilder.buildVault(
-            _initializationTime,
-            protocolFee,
-            feeWallet,
-            address(derivativeSpecification),
-            collateralToken,
-            oracles,
-            oracleIterators,
-            collateralSplit,
-            tokenBuilder,
-            feeLogger,
-            authorFeeLimit,
-            settlementDelay
+    /// @param _liveTime vault live timestamp
+    function createVault(bytes32 _derivativeSymbolHash, uint256 _liveTime)
+        external
+    {
+        IDerivativeSpecification derivativeSpecification =
+            IDerivativeSpecification(
+                derivativeSpecificationRegistry.get(_derivativeSymbolHash)
+            );
+        require(
+            address(derivativeSpecification) != address(0),
+            "Specification is absent"
         );
-        emit VaultCreated(_derivativeSymbolHash, vault, address(derivativeSpecification));
+
+        address collateralToken =
+            collateralTokenRegistry.get(
+                derivativeSpecification.collateralTokenSymbol()
+            );
+        address collateralSplit =
+            collateralSplitRegistry.get(
+                derivativeSpecification.collateralSplitSymbol()
+            );
+
+        address[] memory oracles;
+        address[] memory oracleIterators;
+        (oracles, oracleIterators) = getOraclesAndIterators(
+            derivativeSpecification
+        );
+
+        require(_liveTime > 0, "Zero live time");
+
+        address vault =
+            vaultBuilder.buildVault(
+                _liveTime,
+                protocolFee,
+                feeWallet,
+                address(derivativeSpecification),
+                collateralToken,
+                oracles,
+                oracleIterators,
+                collateralSplit,
+                tokenBuilder,
+                feeLogger,
+                authorFeeLimit,
+                settlementDelay
+            );
+        emit VaultCreated(
+            _derivativeSymbolHash,
+            vault,
+            address(derivativeSpecification)
+        );
         _vaults.push(vault);
     }
 
-    function setProtocolFee(uint _protocolFee) external onlyOwner {
+    function getOraclesAndIterators(
+        IDerivativeSpecification _derivativeSpecification
+    )
+        internal
+        returns (address[] memory _oracles, address[] memory _oracleIterators)
+    {
+        bytes32[] memory oracleSymbols =
+            _derivativeSpecification.oracleSymbols();
+        bytes32[] memory oracleIteratorSymbols =
+            _derivativeSpecification.oracleIteratorSymbols();
+        require(
+            oracleSymbols.length == oracleIteratorSymbols.length,
+            "Oracles and iterators length"
+        );
+
+        _oracles = new address[](oracleSymbols.length);
+        _oracleIterators = new address[](oracleIteratorSymbols.length);
+        for (uint256 i = 0; i < oracleSymbols.length; i++) {
+            address oracle = oracleRegistry.get(oracleSymbols[i]);
+            require(address(oracle) != address(0), "Oracle is absent");
+            _oracles[i] = oracle;
+
+            address oracleIterator =
+                oracleIteratorRegistry.get(oracleIteratorSymbols[i]);
+            require(
+                address(oracleIterator) != address(0),
+                "OracleIterator is absent"
+            );
+            _oracleIterators[i] = oracleIterator;
+        }
+    }
+
+    function setProtocolFee(uint256 _protocolFee) external onlyOwner {
         protocolFee = _protocolFee;
     }
 
-    function setAuthorFeeLimit(uint _authorFeeLimit) external onlyOwner {
+    function setAuthorFeeLimit(uint256 _authorFeeLimit) external onlyOwner {
         authorFeeLimit = _authorFeeLimit;
     }
 
@@ -145,13 +188,20 @@ contract VaultFactory is OwnableUpgradeSafe {
         vaultBuilder = IVaultBuilder(_vaultBuilder);
     }
 
-    function setSettlementDelay(uint _settlementDelay) public onlyOwner {
+    function setSettlementDelay(uint256 _settlementDelay) public onlyOwner {
         settlementDelay = _settlementDelay;
     }
 
-    function setDerivativeSpecificationRegistry(address _derivativeSpecificationRegistry) public onlyOwner {
-        require(_derivativeSpecificationRegistry != address(0), "Derivative specification registry");
-        derivativeSpecificationRegistry = IAddressRegistry(_derivativeSpecificationRegistry);
+    function setDerivativeSpecificationRegistry(
+        address _derivativeSpecificationRegistry
+    ) public onlyOwner {
+        require(
+            _derivativeSpecificationRegistry != address(0),
+            "Derivative specification registry"
+        );
+        derivativeSpecificationRegistry = IAddressRegistry(
+            _derivativeSpecificationRegistry
+        );
     }
 
     function setOracleRegistry(address _oracleRegistry) public onlyOwner {
@@ -159,18 +209,36 @@ contract VaultFactory is OwnableUpgradeSafe {
         oracleRegistry = IAddressRegistry(_oracleRegistry);
     }
 
-    function setOracleIteratorRegistry(address _oracleIteratorRegistry) public onlyOwner {
-        require(_oracleIteratorRegistry != address(0), "Oracle iterator registry");
+    function setOracleIteratorRegistry(address _oracleIteratorRegistry)
+        public
+        onlyOwner
+    {
+        require(
+            _oracleIteratorRegistry != address(0),
+            "Oracle iterator registry"
+        );
         oracleIteratorRegistry = IAddressRegistry(_oracleIteratorRegistry);
     }
 
-    function setCollateralTokenRegistry(address _collateralTokenRegistry) public onlyOwner {
-        require(_collateralTokenRegistry != address(0), "Collateral token registry");
+    function setCollateralTokenRegistry(address _collateralTokenRegistry)
+        public
+        onlyOwner
+    {
+        require(
+            _collateralTokenRegistry != address(0),
+            "Collateral token registry"
+        );
         collateralTokenRegistry = IAddressRegistry(_collateralTokenRegistry);
     }
 
-    function setCollateralSplitRegistry(address _collateralSplitRegistry) public onlyOwner {
-        require(_collateralSplitRegistry != address(0), "Collateral split registry");
+    function setCollateralSplitRegistry(address _collateralSplitRegistry)
+        public
+        onlyOwner
+    {
+        require(
+            _collateralSplitRegistry != address(0),
+            "Collateral split registry"
+        );
         collateralSplitRegistry = IAddressRegistry(_collateralSplitRegistry);
     }
 
@@ -205,21 +273,21 @@ contract VaultFactory is OwnableUpgradeSafe {
     /// @notice Returns vault based on internal index
     /// @param _index internal vault index
     /// @return vault address
-    function getVault(uint _index) external view returns(address) {
+    function getVault(uint256 _index) external view returns (address) {
         return _vaults[_index];
     }
 
     /// @notice Get last created vault index
     /// @return last created vault index
-    function getLastVaultIndex() external view returns(uint) {
+    function getLastVaultIndex() external view returns (uint256) {
         return _vaults.length - 1;
     }
 
     /// @notice Get all previously created vaults
     /// @return all previously created vaults
-    function getAllVaults() external view returns(address[] memory) {
+    function getAllVaults() external view returns (address[] memory) {
         return _vaults;
     }
 
-    uint256[47] private __gap;
+    uint256[50] private __gap;
 }

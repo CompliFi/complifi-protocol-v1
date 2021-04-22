@@ -13,12 +13,12 @@ module.exports = async (done) => {
 
   try {
     const deployConfig = config[networkId];
-    if(!deployConfig){
-      throw(`${networkId} configuration is absent`);
+    if (!deployConfig) {
+      throw `${networkId} configuration is absent`;
     }
 
     const CONTRACT_ADMIN_ACCOUNT = accounts[0];
-    console.log('CONTRACT_ADMIN_ACCOUNT :: ',CONTRACT_ADMIN_ACCOUNT);
+    console.log("CONTRACT_ADMIN_ACCOUNT :: ", CONTRACT_ADMIN_ACCOUNT);
 
     const vaultFactoryAddress = (await VaultFactoryProxy.deployed()).address;
     const vaultFactory = await VaultFactory.at(vaultFactoryAddress);
@@ -26,10 +26,12 @@ module.exports = async (done) => {
     const setOracle = async (symbol) => {
       console.log("Adding oracle " + symbol);
       const address = deployConfig[symbol];
-      if(address === '0x0') throw "Empty oracle " + symbol;
+      if (address === "0x0") throw "Empty oracle " + symbol;
       const result = await vaultFactory.setOracle(deployConfig[symbol]);
-      console.log(`Added oracle ${deployConfig[symbol]} as ${symbol} in ${result.tx}`);
-    }
+      console.log(
+        `Added oracle ${deployConfig[symbol]} as ${symbol} in ${result.tx}`
+      );
+    };
 
     // https://docs.chain.link/docs/reference-contracts
     await setOracle("ETH-USD");
@@ -45,7 +47,7 @@ module.exports = async (done) => {
     await setOracle("LINK-USD");
 
     done();
-  } catch(e) {
+  } catch (e) {
     console.log(e);
     done();
   }

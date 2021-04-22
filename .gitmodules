@@ -1,3 +1,0 @@
-[submodule "echidna"]
-	path = echidna
-	url = git@github.com:trailofbits/echidna.git

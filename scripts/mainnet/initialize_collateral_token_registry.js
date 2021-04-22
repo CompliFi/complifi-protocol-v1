@@ -13,12 +13,12 @@ module.exports = async (done) => {
 
   try {
     const deployConfig = config[networkId];
-    if(!deployConfig){
-      throw(`${networkId} configuration is absent`);
+    if (!deployConfig) {
+      throw `${networkId} configuration is absent`;
     }
 
     const CONTRACT_ADMIN_ACCOUNT = accounts[0];
-    console.log('CONTRACT_ADMIN_ACCOUNT :: ',CONTRACT_ADMIN_ACCOUNT);
+    console.log("CONTRACT_ADMIN_ACCOUNT :: ", CONTRACT_ADMIN_ACCOUNT);
 
     const vaultFactoryAddress = (await VaultFactoryProxy.deployed()).address;
     const vaultFactory = await VaultFactory.at(vaultFactoryAddress);
@@ -26,10 +26,14 @@ module.exports = async (done) => {
     const setCollateralToken = async (symbol) => {
       console.log("Adding collateral " + symbol);
       const address = deployConfig[symbol];
-      if(address === '0x0') throw "Empty collateral token " + symbol;
-      const result = await vaultFactory.setCollateralToken(deployConfig[symbol]);
-      console.log(`Added collateral ${deployConfig[symbol]} as ${symbol} in ${result.tx}`);
-    }
+      if (address === "0x0") throw "Empty collateral token " + symbol;
+      const result = await vaultFactory.setCollateralToken(
+        deployConfig[symbol]
+      );
+      console.log(
+        `Added collateral ${deployConfig[symbol]} as ${symbol} in ${result.tx}`
+      );
+    };
 
     // USDC https://www.centre.io/developer-resources
     await setCollateralToken("USDC");
@@ -39,7 +43,7 @@ module.exports = async (done) => {
     await setCollateralToken("WETH");
     await setCollateralToken("LINK");
     done();
-  } catch(e) {
+  } catch (e) {
     console.log(e);
     done();
   }

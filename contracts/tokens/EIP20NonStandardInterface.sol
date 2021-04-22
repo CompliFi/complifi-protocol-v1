@@ -1,6 +1,6 @@
-// "SPDX-License-Identifier: GNU General Public License v3.0"
+// "SPDX-License-Identifier: GPL-3.0-or-later"
 
-pragma solidity 0.6.12;
+pragma solidity 0.7.6;
 
 /// @title EIP20NonStandardInterface
 /// @dev Version of ERC20 with no return values for `transfer` and `transferFrom`
@@ -36,7 +36,11 @@ interface EIP20NonStandardInterface {
     /// @param src The address of the source account
     /// @param dst The address of the destination account
     /// @param amount The number of tokens to transfer
-    function transferFrom(address src, address dst, uint256 amount) external;
+    function transferFrom(
+        address src,
+        address dst,
+        uint256 amount
+    ) external;
 
     /// @notice Approve `spender` to transfer up to `amount` from `src`
     /// @dev This will overwrite the approval amount for `spender`
@@ -44,14 +48,23 @@ interface EIP20NonStandardInterface {
     /// @param spender The address of the account which may transfer tokens
     /// @param amount The number of tokens that are approved
     /// @return success Whether or not the approval succeeded
-    function approve(address spender, uint256 amount) external returns (bool success);
+    function approve(address spender, uint256 amount)
+        external
+        returns (bool success);
 
     /// @notice Get the current allowance from `owner` for `spender`
     /// @param owner The address of the account which owns the tokens to be spent
     /// @param spender The address of the account which may transfer tokens
     /// @return remaining The number of tokens allowed to be spent
-    function allowance(address owner, address spender) external view returns (uint256 remaining);
+    function allowance(address owner, address spender)
+        external
+        view
+        returns (uint256 remaining);
 
     event Transfer(address indexed from, address indexed to, uint256 amount);
-    event Approval(address indexed owner, address indexed spender, uint256 amount);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 amount
+    );
 }

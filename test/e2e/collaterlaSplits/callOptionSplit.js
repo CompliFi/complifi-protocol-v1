@@ -3,7 +3,7 @@ const StubCollateralSplit = artifacts.require("StubCollateralSplit");
 
 const FRACTION_MULTIPLIER = Math.pow(10, 12);
 
-contract("Call Option Derivatives", accounts => {
+contract("Call Option Derivatives", (accounts) => {
   let collateralSplit;
 
   beforeEach(async () => {
@@ -13,7 +13,8 @@ contract("Call Option Derivatives", accounts => {
   });
 
   it("...should calculate split function.", async () => {
-    const callContract = async (value) => await callDerivative(collateralSplit.splitNominalValue, value);
+    const callContract = async (value) =>
+      await callDerivative(collateralSplit.splitNominalValue, value);
 
     assert.equal(await callContract(-1), 0, "-1");
     assert.equal(await callContract(-0.9999), 0, "-0.9999");
@@ -25,7 +26,7 @@ contract("Call Option Derivatives", accounts => {
     assert.equal(await callContract(-0.1), 0, "-0.1");
     assert.equal(await callContract(-0.01), 0, "-0.01");
 
-    assert.equal(await callContract(0),  calcSplit(0), "0");
+    assert.equal(await callContract(0), calcSplit(0), "0");
     assert.equal(await callContract(0.3), calcSplit(0.3), "0.3");
     assert.equal(await callContract(0.5), calcSplit(0.5), "0.5");
     assert.equal(await callContract(0.9999), calcSplit(0.9999), "0.9999");
@@ -43,9 +44,9 @@ function calcSplit(value) {
 }
 
 function trunc4(value) {
-  return Math.trunc(value * FRACTION_MULTIPLIER) / FRACTION_MULTIPLIER
+  return Math.trunc(value * FRACTION_MULTIPLIER) / FRACTION_MULTIPLIER;
 }
 
-async function callDerivative(func, value){
-  return await func.call(value * FRACTION_MULTIPLIER) / FRACTION_MULTIPLIER;
+async function callDerivative(func, value) {
+  return (await func.call(value * FRACTION_MULTIPLIER)) / FRACTION_MULTIPLIER;
 }

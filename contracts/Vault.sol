@@ -1,6 +1,6 @@
-// "SPDX-License-Identifier: GNU General Public License v3.0"
+// "SPDX-License-Identifier: GPL-3.0-or-later"
 
-pragma solidity 0.6.12;
+pragma solidity 0.7.6;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -26,18 +26,25 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
 
     uint256 public constant FRACTION_MULTIPLIER = 10**12;
 
-    enum State { Created, Minting, Live, Settled }
+    enum State { Created, Live, Settled }
 
     event StateChanged(State oldState, State newState);
-    event MintingStateSet(address primaryToken, address complementToken);
-    event LiveStateSet();
-    event SettledStateSet(int256[] underlyingStarts, int256[] underlyingEnds, uint256 primaryConversion, uint256 complementConversion);
+    event LiveStateSet(address primaryToken, address complementToken);
+    event SettledStateSet(
+        int256[] underlyingStarts,
+        int256[] underlyingEnds,
+        uint256 primaryConversion,
+        uint256 complementConversion
+    );
     event Minted(uint256 minted, uint256 collateral, uint256 fee);
     event Refunded(uint256 tokenAmount, uint256 collateral);
-    event Redeemed(uint256 tokenAmount, uint256 conversion, uint256 collateral, bool isPrimary);
+    event Redeemed(
+        uint256 tokenAmount,
+        uint256 conversion,
+        uint256 collateral,
+        bool isPrimary
+    );
 
-    /// @notice vault initialization time
-    uint256 public initializationTime;
     /// @notice start of live period
     uint256 public liveTime;
     /// @notice end of live period
@@ -86,7 +93,7 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
     IERC20MintedBurnable public complementToken;
 
     constructor(
-        uint256 _initializationTime,
+        uint256 _liveTime,
         uint256 _protocolFee,
         address _feeWallet,
         address _derivativeSpecification,
@@ -99,8 +106,9 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         uint256 _authorFeeLimit,
         uint256 _settlementDelay
     ) public {
-        require(_initializationTime > 0, "Initialization time");
-        initializationTime = _initializationTime;
+        require(_liveTime > 0, "Live zero");
+        require(_liveTime <= block.timestamp, "Live in future");
+        liveTime = _liveTime;
 
         protocolFee = _protocolFee;
 
@@ -108,7 +116,9 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         feeWallet = _feeWallet;
 
         require(_derivativeSpecification != address(0), "Derivative");
-        derivativeSpecification = IDerivativeSpecification(_derivativeSpecification);
+        derivativeSpecification = IDerivativeSpecification(
+            _derivativeSpecification
+        );
 
         require(_collateralToken != address(0), "Collateral token");
         collateralToken = IERC20(_collateralToken);
@@ -118,7 +128,10 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         oracles = _oracles;
 
         require(_oracleIterators.length > 0, "OracleIterators");
-        require(_oracleIterators[0] != address(0), "First oracle iterator is absent");
+        require(
+            _oracleIterators[0] != address(0),
+            "First oracle iterator is absent"
+        );
         oracleIterators = _oracleIterators;
 
         require(_collateralSplit != address(0), "Collateral split");
@@ -132,9 +145,8 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
 
         authorFeeLimit = _authorFeeLimit;
 
-        liveTime = initializationTime + derivativeSpecification.mintingPeriod();
-        require(liveTime > block.timestamp, "Live time");
         settleTime = liveTime + derivativeSpecification.livePeriod();
+        require(block.timestamp < settleTime, "Settled time");
 
         settlementDelay = _settlementDelay;
     }
@@ -147,25 +159,22 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         _unpause();
     }
 
-    /// @notice Initialize vault by creating derivative token and switching to Minting state
+    /// @notice Initialize vault by creating derivative token and switching to Live state
     /// @dev Extracted from constructor to reduce contract gas creation amount
-    function initialize() external {
+    function initialize(int256[] calldata _underlyingStarts) external {
         require(state == State.Created, "Incorrect state.");
 
-        changeState(State.Minting);
+        underlyingStarts = _underlyingStarts;
 
-        (primaryToken, complementToken) = tokenBuilder.buildTokens(derivativeSpecification, settleTime, address(collateralToken));
-
-        emit MintingStateSet(address(primaryToken), address(complementToken));
-    }
-
-    /// @notice Switch to Live state if appropriate time threshold is passed
-    function live() public {
-        require(state == State.Minting, 'Incorrect state');
-        require(block.timestamp >= liveTime, "Incorrect time");
         changeState(State.Live);
 
-        emit LiveStateSet();
+        (primaryToken, complementToken) = tokenBuilder.buildTokens(
+            derivativeSpecification,
+            settleTime,
+            address(collateralToken)
+        );
+
+        emit LiveStateSet(address(primaryToken), address(complementToken));
     }
 
     function changeState(State _newState) internal {
@@ -173,51 +182,65 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         emit StateChanged(state, _newState);
     }
 
-
     /// @notice Switch to Settled state if appropriate time threshold is passed and
     /// set underlyingStarts value and set underlyingEnds value,
     /// calculate primaryConversion and complementConversion params
-    /// @dev Reverts if underlyingStart or underlyingEnd are not available
+    /// @dev Reverts if underlyingEnds are not available
     /// Vault cannot settle when it paused
-    function settle(uint256[] memory _underlyingStartRoundHints, uint256[] memory _underlyingEndRoundHints)
-    public whenNotPaused() {
+    function settle(uint256[] calldata _underlyingEndRoundHints)
+        public
+        whenNotPaused()
+    {
         require(state == State.Live, "Incorrect state");
-        require(block.timestamp >= settleTime + settlementDelay, "Incorrect time");
+        require(
+            block.timestamp >= (settleTime + settlementDelay),
+            "Incorrect time"
+        );
         changeState(State.Settled);
 
         uint256 split;
-        (split, underlyingStarts, underlyingEnds) = collateralSplit.split(
-            oracles, oracleIterators, liveTime, settleTime, _underlyingStartRoundHints, _underlyingEndRoundHints
+        (split, underlyingEnds) = collateralSplit.split(
+            oracles,
+            oracleIterators,
+            underlyingStarts,
+            settleTime,
+            _underlyingEndRoundHints
         );
         split = range(split);
 
         uint256 collectedCollateral = collateralToken.balanceOf(address(this));
         uint256 mintedPrimaryTokenAmount = primaryToken.totalSupply();
 
-        if(mintedPrimaryTokenAmount > 0) {
+        if (mintedPrimaryTokenAmount > 0) {
             uint256 primaryCollateralPortion = collectedCollateral.mul(split);
-            primaryConversion = primaryCollateralPortion.div(mintedPrimaryTokenAmount);
-            complementConversion = collectedCollateral.mul(FRACTION_MULTIPLIER).sub(primaryCollateralPortion).div(mintedPrimaryTokenAmount);
+            primaryConversion = primaryCollateralPortion.div(
+                mintedPrimaryTokenAmount
+            );
+            complementConversion = collectedCollateral
+                .mul(FRACTION_MULTIPLIER)
+                .sub(primaryCollateralPortion)
+                .div(mintedPrimaryTokenAmount);
         }
 
-        emit SettledStateSet(underlyingStarts, underlyingEnds, primaryConversion, complementConversion);
+        emit SettledStateSet(
+            underlyingStarts,
+            underlyingEnds,
+            primaryConversion,
+            complementConversion
+        );
     }
 
-    function range(uint256 _split) public pure returns(uint256) {
-        if(_split > FRACTION_MULTIPLIER) {
+    function range(uint256 _split) public pure returns (uint256) {
+        if (_split > FRACTION_MULTIPLIER) {
             return FRACTION_MULTIPLIER;
         }
         return _split;
     }
 
-    /// @notice Mints primary and complement derivative tokens
-    /// @dev Checks and switches to the right state and does nothing if vault is not in Minting state
-    function mint(uint256 _collateralAmount) external nonReentrant() {
-        if(block.timestamp >= liveTime && state == State.Minting) {
-            live();
-        }
-
-        require(state == State.Minting, 'Minting period is over');
+    function performMint(address _recipient, uint256 _collateralAmount)
+        internal
+    {
+        require(state == State.Live, "Live is over");
 
         require(_collateralAmount > 0, "Zero amount");
         _collateralAmount = doTransferIn(msg.sender, _collateralAmount);
@@ -228,89 +251,202 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
 
         uint256 tokenAmount = denominate(netAmount);
 
-        primaryToken.mint(msg.sender, tokenAmount);
-        complementToken.mint(msg.sender, tokenAmount);
+        primaryToken.mint(_recipient, tokenAmount);
+        complementToken.mint(_recipient, tokenAmount);
 
         emit Minted(tokenAmount, _collateralAmount, feeAmount);
     }
 
-    /// @notice Refund equal amounts of derivative tokens for collateral at any time
-    function refund(uint256 _tokenAmount) external nonReentrant() {
+    function mintTo(address _recipient, uint256 _collateralAmount)
+        external
+        nonReentrant()
+    {
+        performMint(_recipient, _collateralAmount);
+    }
+
+    /// @notice Mints primary and complement derivative tokens
+    /// @dev Checks and switches to the right state and does nothing if vault is not in Live state
+    function mint(uint256 _collateralAmount) external nonReentrant() {
+        performMint(msg.sender, _collateralAmount);
+    }
+
+    function performRefund(address _recipient, uint256 _tokenAmount) internal {
         require(_tokenAmount > 0, "Zero amount");
-        require(_tokenAmount <= primaryToken.balanceOf(msg.sender), "Insufficient primary amount");
-        require(_tokenAmount <= complementToken.balanceOf(msg.sender), "Insufficient complement amount");
+        require(
+            _tokenAmount <= primaryToken.balanceOf(msg.sender),
+            "Insufficient primary amount"
+        );
+        require(
+            _tokenAmount <= complementToken.balanceOf(msg.sender),
+            "Insufficient complement amount"
+        );
 
         primaryToken.burnFrom(msg.sender, _tokenAmount);
         complementToken.burnFrom(msg.sender, _tokenAmount);
         uint256 unDenominated = unDenominate(_tokenAmount);
 
         emit Refunded(_tokenAmount, unDenominated);
-        doTransferOut(msg.sender, unDenominated);
+        doTransferOut(_recipient, unDenominated);
+    }
+
+    /// @notice Refund equal amounts of derivative tokens for collateral at any time
+    function refund(uint256 _tokenAmount) external nonReentrant() {
+        performRefund(msg.sender, _tokenAmount);
+    }
+
+    function refundTo(address _recipient, uint256 _tokenAmount)
+        external
+        nonReentrant()
+    {
+        performRefund(_recipient, _tokenAmount);
+    }
+
+    function performRedeem(
+        address _recipient,
+        uint256 _primaryTokenAmount,
+        uint256 _complementTokenAmount,
+        uint256[] calldata _underlyingEndRoundHints
+    ) internal {
+        require(
+            _primaryTokenAmount > 0 || _complementTokenAmount > 0,
+            "Both tokens zero amount"
+        );
+        require(
+            _primaryTokenAmount <= primaryToken.balanceOf(msg.sender),
+            "Insufficient primary amount"
+        );
+        require(
+            _complementTokenAmount <= complementToken.balanceOf(msg.sender),
+            "Insufficient complement amount"
+        );
+
+        if (
+            block.timestamp >= (settleTime + settlementDelay) &&
+            state == State.Live
+        ) {
+            settle(_underlyingEndRoundHints);
+        }
+
+        if (state == State.Settled) {
+            redeemAsymmetric(
+                _recipient,
+                primaryToken,
+                _primaryTokenAmount,
+                true
+            );
+            redeemAsymmetric(
+                _recipient,
+                complementToken,
+                _complementTokenAmount,
+                false
+            );
+        }
+    }
+
+    function redeemTo(
+        address _recipient,
+        uint256 _primaryTokenAmount,
+        uint256 _complementTokenAmount,
+        uint256[] calldata _underlyingEndRoundHints
+    ) external nonReentrant() {
+        performRedeem(
+            _recipient,
+            _primaryTokenAmount,
+            _complementTokenAmount,
+            _underlyingEndRoundHints
+        );
     }
 
     /// @notice Redeems unequal amounts previously calculated conversions if the vault is in Settled state
     function redeem(
         uint256 _primaryTokenAmount,
         uint256 _complementTokenAmount,
-        uint256[] memory _underlyingStartRoundHints,
-        uint256[] memory _underlyingEndRoundHints
+        uint256[] calldata _underlyingEndRoundHints
     ) external nonReentrant() {
-        require(_primaryTokenAmount > 0 || _complementTokenAmount > 0, "Both tokens zero amount");
-        require(_primaryTokenAmount <= primaryToken.balanceOf(msg.sender), "Insufficient primary amount");
-        require(_complementTokenAmount <= complementToken.balanceOf(msg.sender), "Insufficient complement amount");
-
-        if(block.timestamp >= liveTime && state == State.Minting) {
-            live();
-        }
-
-        if(block.timestamp >= settleTime && state == State.Live) {
-            settle(_underlyingStartRoundHints, _underlyingEndRoundHints);
-        }
-
-        if(state == State.Settled) {
-            redeemAsymmetric(primaryToken, _primaryTokenAmount, true);
-            redeemAsymmetric(complementToken, _complementTokenAmount, false);
-        }
+        performRedeem(
+            msg.sender,
+            _primaryTokenAmount,
+            _complementTokenAmount,
+            _underlyingEndRoundHints
+        );
     }
 
-    function redeemAsymmetric(IERC20MintedBurnable _derivativeToken, uint256 _amount, bool _isPrimary) internal {
-        if(_amount > 0) {
-            _derivativeToken.burnFrom(msg.sender, _amount);
-            uint256 conversion = _isPrimary ? primaryConversion : complementConversion;
-            uint256 collateral = _amount.mul(conversion).div(FRACTION_MULTIPLIER);
-            emit Redeemed(_amount, conversion, collateral, _isPrimary);
-            if(collateral > 0) {
-                doTransferOut(msg.sender, collateral);
-            }
+    function redeemAsymmetric(
+        address _recipient,
+        IERC20MintedBurnable _derivativeToken,
+        uint256 _amount,
+        bool _isPrimary
+    ) internal {
+        if (_amount == 0) {
+            return;
+        }
+
+        _derivativeToken.burnFrom(msg.sender, _amount);
+        uint256 conversion =
+            _isPrimary ? primaryConversion : complementConversion;
+        uint256 collateral = _amount.mul(conversion).div(FRACTION_MULTIPLIER);
+        emit Redeemed(_amount, conversion, collateral, _isPrimary);
+        if (collateral > 0) {
+            doTransferOut(_recipient, collateral);
         }
     }
 
-    function denominate(uint256 _collateralAmount) internal view returns(uint256) {
-        return _collateralAmount.div(derivativeSpecification.primaryNominalValue() + derivativeSpecification.complementNominalValue());
+    function denominate(uint256 _collateralAmount)
+        internal
+        view
+        returns (uint256)
+    {
+        return
+            _collateralAmount.div(
+                derivativeSpecification.primaryNominalValue() +
+                    derivativeSpecification.complementNominalValue()
+            );
     }
 
-    function unDenominate(uint256 _tokenAmount) internal view returns(uint256) {
-        return _tokenAmount.mul(derivativeSpecification.primaryNominalValue() + derivativeSpecification.complementNominalValue());
+    function unDenominate(uint256 _tokenAmount)
+        internal
+        view
+        returns (uint256)
+    {
+        return
+            _tokenAmount.mul(
+                derivativeSpecification.primaryNominalValue() +
+                    derivativeSpecification.complementNominalValue()
+            );
     }
 
-    function withdrawFee(uint256 _amount) internal returns(uint256){
-        uint256 protocolFeeAmount = calcAndTransferFee(_amount, payable(feeWallet), protocolFee);
+    function withdrawFee(uint256 _amount) internal returns (uint256) {
+        uint256 protocolFeeAmount =
+            calcAndTransferFee(_amount, payable(feeWallet), protocolFee);
 
-        feeLogger.log(msg.sender, address(collateralToken), protocolFeeAmount, derivativeSpecification.author());
+        feeLogger.log(
+            msg.sender,
+            address(collateralToken),
+            protocolFeeAmount,
+            derivativeSpecification.author()
+        );
 
         uint256 authorFee = derivativeSpecification.authorFee();
-        if(authorFee > authorFeeLimit) {
+        if (authorFee > authorFeeLimit) {
             authorFee = authorFeeLimit;
         }
-        uint256 authorFeeAmount = calcAndTransferFee(_amount, payable(derivativeSpecification.author()), authorFee);
+        uint256 authorFeeAmount =
+            calcAndTransferFee(
+                _amount,
+                payable(derivativeSpecification.author()),
+                authorFee
+            );
 
         return protocolFeeAmount.add(authorFeeAmount);
     }
 
-    function calcAndTransferFee(uint256 _amount, address payable _beneficiary, uint256 _fee)
-    internal returns(uint256 _feeAmount){
+    function calcAndTransferFee(
+        uint256 _amount,
+        address payable _beneficiary,
+        uint256 _fee
+    ) internal returns (uint256 _feeAmount) {
         _feeAmount = _amount.mul(_fee).div(FRACTION_MULTIPLIER);
-        if(_feeAmount > 0) {
+        if (_feeAmount > 0) {
             doTransferOut(_beneficiary, _feeAmount);
         }
     }
@@ -321,30 +457,40 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
     /// which may be less than `amount` if there is a fee attached to the transfer.
     /// @notice This wrapper safely handles non-standard ERC-20 tokens that do not return a value.
     /// See here: https://medium.com/coinmonks/missing-return-value-bug-at-least-130-tokens-affected-d67bf08521ca
-    function doTransferIn(address from, uint256 amount) internal returns (uint256) {
+    function doTransferIn(address from, uint256 amount)
+        internal
+        returns (uint256)
+    {
         uint256 balanceBefore = collateralToken.balanceOf(address(this));
-        EIP20NonStandardInterface(address(collateralToken)).transferFrom(from, address(this), amount);
+        EIP20NonStandardInterface(address(collateralToken)).transferFrom(
+            from,
+            address(this),
+            amount
+        );
 
         bool success;
         assembly {
             switch returndatasize()
-            case 0 {                       // This is a non-standard ERC-20
-                success := not(0)          // set success to true
-            }
-            case 32 {                      // This is a compliant ERC-20
-                returndatacopy(0, 0, 32)
-                success := mload(0)        // Set `success = returndata` of external call
-            }
-            default {                      // This is an excessively non-compliant ERC-20, revert.
-                revert(0, 0)
-            }
+                case 0 {
+                    // This is a non-standard ERC-20
+                    success := not(0) // set success to true
+                }
+                case 32 {
+                    // This is a compliant ERC-20
+                    returndatacopy(0, 0, 32)
+                    success := mload(0) // Set `success = returndata` of external call
+                }
+                default {
+                    // This is an excessively non-compliant ERC-20, revert.
+                    revert(0, 0)
+                }
         }
         require(success, "TOKEN_TRANSFER_IN_FAILED");
 
         // Calculate the amount that was *actually* transferred
         uint256 balanceAfter = collateralToken.balanceOf(address(this));
         require(balanceAfter >= balanceBefore, "TOKEN_TRANSFER_IN_OVERFLOW");
-        return balanceAfter - balanceBefore;   // underflow already checked above, just subtract
+        return balanceAfter - balanceBefore; // underflow already checked above, just subtract
     }
 
     /// @dev Similar to EIP20 transfer, except it handles a False success from `transfer` and returns an explanatory
@@ -354,21 +500,27 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
     /// @notice This wrapper safely handles non-standard ERC-20 tokens that do not return a value.
     /// See here: https://medium.com/coinmonks/missing-return-value-bug-at-least-130-tokens-affected-d67bf08521ca
     function doTransferOut(address to, uint256 amount) internal {
-        EIP20NonStandardInterface(address(collateralToken)).transfer(to, amount);
+        EIP20NonStandardInterface(address(collateralToken)).transfer(
+            to,
+            amount
+        );
 
         bool success;
         assembly {
             switch returndatasize()
-            case 0 {                      // This is a non-standard ERC-20
-                success := not(0)          // set success to true
-            }
-            case 32 {                     // This is a complaint ERC-20
-                returndatacopy(0, 0, 32)
-                success := mload(0)        // Set `success = returndata` of external call
-            }
-            default {                     // This is an excessively non-compliant ERC-20, revert.
-                revert(0, 0)
-            }
+                case 0 {
+                    // This is a non-standard ERC-20
+                    success := not(0) // set success to true
+                }
+                case 32 {
+                    // This is a complaint ERC-20
+                    returndatacopy(0, 0, 32)
+                    success := mload(0) // Set `success = returndata` of external call
+                }
+                default {
+                    // This is an excessively non-compliant ERC-20, revert.
+                    revert(0, 0)
+                }
         }
         require(success, "TOKEN_TRANSFER_OUT_FAILED");
     }

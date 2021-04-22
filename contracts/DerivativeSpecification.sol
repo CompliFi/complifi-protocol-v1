@@ -1,13 +1,12 @@
-// "SPDX-License-Identifier: GNU General Public License v3.0"
+// "SPDX-License-Identifier: GPL-3.0-or-later"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.7.6;
 
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorInterface.sol";
 import "./IDerivativeSpecification.sol";
 
 contract DerivativeSpecification is IDerivativeSpecification {
-
-    function isDerivativeSpecification() external override pure returns(bool) {
+    function isDerivativeSpecification() external pure override returns (bool) {
         return true;
     }
 
@@ -18,70 +17,102 @@ contract DerivativeSpecification is IDerivativeSpecification {
     bytes32 internal collateralTokenSymbol_;
     bytes32 internal collateralSplitSymbol_;
 
-    uint internal mintingPeriod_;
-    uint internal livePeriod_;
+    uint256 internal livePeriod_;
 
-    uint internal primaryNominalValue_;
-    uint internal complementNominalValue_;
+    uint256 internal primaryNominalValue_;
+    uint256 internal complementNominalValue_;
 
-    uint internal authorFee_;
+    uint256 internal authorFee_;
 
     string internal name_;
     string private baseURI_;
     address internal author_;
 
-    function name() external view override virtual returns (string memory){
+    function name() external view virtual override returns (string memory) {
         return name_;
     }
 
-    function baseURI() external view override virtual returns (string memory){
+    function baseURI() external view virtual override returns (string memory) {
         return baseURI_;
     }
 
-    function symbol() external view override virtual returns (string memory){
+    function symbol() external view virtual override returns (string memory) {
         return symbol_;
     }
 
-    function oracleSymbols() external view override virtual returns (bytes32[] memory){
+    function oracleSymbols()
+        external
+        view
+        virtual
+        override
+        returns (bytes32[] memory)
+    {
         return oracleSymbols_;
     }
 
-    function oracleIteratorSymbols() external view override virtual returns (bytes32[] memory){
+    function oracleIteratorSymbols()
+        external
+        view
+        virtual
+        override
+        returns (bytes32[] memory)
+    {
         return oracleIteratorSymbols_;
     }
 
-    function collateralTokenSymbol() external view override virtual returns (bytes32){
+    function collateralTokenSymbol()
+        external
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
         return collateralTokenSymbol_;
     }
 
-    function collateralSplitSymbol() external view override virtual returns (bytes32){
+    function collateralSplitSymbol()
+        external
+        view
+        virtual
+        override
+        returns (bytes32)
+    {
         return collateralSplitSymbol_;
     }
 
-    function mintingPeriod() external view override virtual returns (uint){
-        return mintingPeriod_;
-    }
-    function livePeriod() external view override virtual returns (uint){
+    function livePeriod() external view virtual override returns (uint256) {
         return livePeriod_;
     }
 
-    function primaryNominalValue() external view override virtual returns (uint){
+    function primaryNominalValue()
+        external
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         return primaryNominalValue_;
     }
 
-    function complementNominalValue() external view override virtual  returns (uint){
+    function complementNominalValue()
+        external
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         return complementNominalValue_;
     }
 
-    function authorFee() external view override virtual returns (uint){
+    function authorFee() external view virtual override returns (uint256) {
         return authorFee_;
     }
 
-    function author() external view override virtual returns (address){
+    function author() external view virtual override returns (address) {
         return author_;
     }
 
-    constructor (
+    constructor(
         address _author,
         string memory _name,
         string memory _symbol,
@@ -89,13 +120,12 @@ contract DerivativeSpecification is IDerivativeSpecification {
         bytes32[] memory _oracleIteratorSymbols,
         bytes32 _collateralTokenSymbol,
         bytes32 _collateralSplitSymbol,
-        uint _mintingPeriod,
-        uint _livePeriod,
-        uint _primaryNominalValue,
-        uint _complementNominalValue,
-        uint _authorFee,
-        string memory _baseURI ) public {
-
+        uint256 _livePeriod,
+        uint256 _primaryNominalValue,
+        uint256 _complementNominalValue,
+        uint256 _authorFee,
+        string memory _baseURI
+    ) public {
         author_ = _author;
         name_ = _name;
         symbol_ = _symbol;
@@ -103,7 +133,6 @@ contract DerivativeSpecification is IDerivativeSpecification {
         oracleIteratorSymbols_ = _oracleIteratorSymbols;
         collateralTokenSymbol_ = _collateralTokenSymbol;
         collateralSplitSymbol_ = _collateralSplitSymbol;
-        mintingPeriod_ = _mintingPeriod;
         livePeriod_ = _livePeriod;
         primaryNominalValue_ = _primaryNominalValue;
         complementNominalValue_ = _complementNominalValue;

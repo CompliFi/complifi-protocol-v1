@@ -1,35 +1,41 @@
-// "SPDX-License-Identifier: GNU General Public License v3.0"
+// "SPDX-License-Identifier: GPL-3.0-or-later"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.7.6;
 
 import "../DerivativeSpecification.sol";
 
-contract StubDerivative is DerivativeSpecification{
-    constructor(bytes32[] memory _oracleSymbols, bytes32[] memory _oracleIteratorSymbols, bytes32 _collateralToken) public DerivativeSpecification(
-        msg.sender,
-        "Stub derivative",
-        "STUB",
-        _oracleSymbols, //"STUBFEED"
-        _oracleIteratorSymbols, //"ChainlinkIterator"
-        _collateralToken,
-        keccak256(abi.encodePacked("x5")),
-        7 * 24 * 3600,
-        21 * 24 * 3600,
-        1,
-        1,
-        0,
-        ""
-    ) {}
+contract StubDerivative is DerivativeSpecification {
+    constructor(
+        bytes32[] memory _oracleSymbols,
+        bytes32[] memory _oracleIteratorSymbols,
+        bytes32 _collateralToken
+    )
+        public
+        DerivativeSpecification(
+            msg.sender,
+            "Stub derivative",
+            "STUB",
+            _oracleSymbols, //"STUBFEED"
+            _oracleIteratorSymbols, //"ChainlinkIterator"
+            _collateralToken,
+            keccak256(abi.encodePacked("x5")),
+            21 * 24 * 3600,
+            1,
+            1,
+            0,
+            ""
+        )
+    {}
 
-    function setName(string memory _name) external {
+    function setName(string calldata _name) external {
         name_ = _name;
     }
 
-    function setSymbol(string memory _symbol) external {
+    function setSymbol(string calldata _symbol) external {
         symbol_ = _symbol;
     }
 
-    function setOracleSymbols(bytes32[] memory _oracleSymbols) external {
+    function setOracleSymbols(bytes32[] calldata _oracleSymbols) external {
         oracleSymbols_ = _oracleSymbols;
     }
 
@@ -41,22 +47,21 @@ contract StubDerivative is DerivativeSpecification{
         collateralSplitSymbol_ = _collateralSplitSymbol;
     }
 
-    function setMintingPeriod(uint _mintingPeriod) external {
-        mintingPeriod_ = _mintingPeriod;
-    }
-    function setLivePeriod(uint _livePeriod) external {
+    function setLivePeriod(uint256 _livePeriod) external {
         livePeriod_ = _livePeriod;
     }
 
-    function setPrimaryNominalValue(uint _primaryNominalValue) external{
+    function setPrimaryNominalValue(uint256 _primaryNominalValue) external {
         primaryNominalValue_ = _primaryNominalValue;
     }
 
-    function setComplementNominalValue(uint _complementNominalValue) external{
+    function setComplementNominalValue(uint256 _complementNominalValue)
+        external
+    {
         complementNominalValue_ = _complementNominalValue;
     }
 
-    function setAuthorFee(uint _authorFee) external {
+    function setAuthorFee(uint256 _authorFee) external {
         authorFee_ = _authorFee;
     }
 }

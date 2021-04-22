@@ -19,10 +19,14 @@ module.exports = async (done) => {
 
     const setCollateralToken = async (symbol) => {
       const stubToken = await StubToken.new("Stub " + symbol, symbol, 0);
-      console.log("Created stub collateral token " + symbol + " " + stubToken.address);
+      console.log(
+        "Created stub collateral token " + symbol + " " + stubToken.address
+      );
       await vaultFactory.setCollateralToken(stubToken.address);
-      console.log("Set stub collateral token " + symbol + " " + stubToken.address);
-    }
+      console.log(
+        "Set stub collateral token " + symbol + " " + stubToken.address
+      );
+    };
 
     await setCollateralToken("WETH");
     await setCollateralToken("USDC");
@@ -35,7 +39,7 @@ module.exports = async (done) => {
       console.log("Created stub feed " + symbol + " " + stubFeed.address);
       await vaultFactory.setOracle(stubFeed.address);
       console.log("Set stub feed " + symbol + " " + stubFeed.address);
-    }
+    };
 
     // https://docs.chain.link/docs/reference-contracts
     await setOracle("ETH-USD");
@@ -49,7 +53,7 @@ module.exports = async (done) => {
     await setOracle("FTSE-GBP");
     await setOracle("FASTGAS");
     await setOracle("LINK-USD");
-  } catch(e) {
+  } catch (e) {
     console.log(e);
     done(e);
     return;

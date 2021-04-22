@@ -1,20 +1,20 @@
-// "SPDX-License-Identifier: GNU General Public License v3.0"
+// "SPDX-License-Identifier: GPL-3.0-or-later"
 
-pragma solidity 0.6.12;
+pragma solidity 0.7.6;
 
 interface IVaultBuilder {
     function buildVault(
-        uint _initializationTime,
-        uint _protocolFee,
+        uint256 _liveTime,
+        uint256 _protocolFee,
         address _feeWallet,
         address _derivativeSpecification,
         address _collateralToken,
-        address[] memory _oracles,
-        address[] memory _oracleIterators,
+        address[] calldata _oracles,
+        address[] calldata _oracleIterators,
         address _collateralSplit,
         address _tokenBuilder,
         address _feeLogger,
-        uint _authorFeeLimit,
-        uint _settlementDelay
-    ) external returns(address);
+        uint256 _authorFeeLimit,
+        uint256 _settlementDelay
+    ) external returns (address);
 }

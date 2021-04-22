@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
 const StubFeed = artifacts.require("StubFeed");
 
-const FEEDS = ["0x39CAEb369bBE25642De19926f08d7687B46BbE6C"];
+const FEEDS = ["0xc386FF7BFc1C6a8Dd38039da3CdbC607d42101Ae","0x6e367e7C012cb6c9A8755c6fE022DCD82130C4F1"];
 
-const randomRange = (range) => Math.random() * range - range/2;
+const randomRange = (range) => Math.random() * range - range / 2;
 
 module.exports = async (done) => {
   const networkType = await web3.eth.net.getNetworkType();
@@ -14,19 +14,30 @@ module.exports = async (done) => {
   console.log("network id:" + networkId);
   console.log("accounts:" + accounts);
 
-  for(const feedAddress of FEEDS) {
+  for (const feedAddress of FEEDS) {
     try {
       console.log("Add new round to feed address " + feedAddress);
       const feed = await StubFeed.at(feedAddress);
       const decimals = 6;
-      const latestAnswer = await feed.latestAnswer.call() / Math.pow(10, decimals);
+      const latestAnswer =
+        (await feed.latestAnswer.call()) / Math.pow(10, decimals);
       console.log("Last round answer " + latestAnswer);
       const newAnswer = latestAnswer * (1 + randomRange(0.02));
       const currentTime = Math.floor(Date.now() / 1000);
-      console.log("Add round with answer: " + Math.trunc(newAnswer * Math.pow(10, decimals)) / Math.pow(10, decimals) + " at " + currentTime);
-      await feed.addRound(Math.trunc(newAnswer * Math.pow(10, decimals)), currentTime, {from: accounts[2]});
+      console.log(
+        "Adding round with answer: " +
+          Math.trunc(newAnswer * Math.pow(10, decimals)) /
+            Math.pow(10, decimals) +
+          " at " +
+          currentTime
+      );
+      await feed.addRound(
+        Math.trunc(newAnswer * Math.pow(10, decimals)),
+        currentTime,
+        { from: accounts[2] }
+      );
       console.log("Added!");
-    } catch(e) {
+    } catch (e) {
       console.log(e);
       done();
     }

@@ -17,8 +17,8 @@ module.exports = async (done) => {
 
   try {
     const deployConfig = config[networkId];
-    if(!deployConfig){
-      throw(`${networkId} configuration is absent`);
+    if (!deployConfig) {
+      throw `${networkId} configuration is absent`;
     }
 
     const vaultFactoryAddress = (await VaultFactoryProxy.deployed()).address;
@@ -28,9 +28,13 @@ module.exports = async (done) => {
       console.log("Deploying specification " + symbol);
       const derivative = await DerivativeSpecification.new(...params);
       console.log("Adding specification " + derivative.address);
-      const result = await vaultFactory.setDerivativeSpecification(derivative.address);
-      console.log(`Added specification ${derivative.address} as ${symbol} in ${result.tx}`);
-    }
+      const result = await vaultFactory.setDerivativeSpecification(
+        derivative.address
+      );
+      console.log(
+        `Added specification ${derivative.address} as ${symbol} in ${result.tx}`
+      );
+    };
 
     await setDerivativeSpecification("1H-ETHx5-USDC", [
       accounts[0],
@@ -40,12 +44,11 @@ module.exports = async (done) => {
       [web3.utils.keccak256("ChainlinkIterator")],
       web3.utils.keccak256(deployConfig["USDC"]),
       web3.utils.keccak256("x5"),
-      15 * 60,
       45 * 60,
       1,
       1,
       0.001 * FRACTION_MULTIPLIER,
-      ''
+      "",
     ]);
 
     await setDerivativeSpecification("1D-ETHx5-USDC", [
@@ -56,15 +59,14 @@ module.exports = async (done) => {
       [web3.utils.keccak256("ChainlinkIterator")],
       web3.utils.keccak256(deployConfig["USDC"]),
       web3.utils.keccak256("x5"),
-      60 * 60,
       24 * 60 * 60,
       1,
       1,
       0,
-      ''
+      "",
     ]);
     done();
-  } catch(e) {
+  } catch (e) {
     console.log(e);
     done();
   }

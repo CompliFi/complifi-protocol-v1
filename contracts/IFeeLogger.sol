@@ -1,7 +1,12 @@
-// "SPDX-License-Identifier: GNU General Public License v3.0"
+// "SPDX-License-Identifier: GPL-3.0-or-later"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.7.6;
 
 interface IFeeLogger {
-    function log(address _liquidityProvider, address _collateral, uint _protocolFee, address _author) external;
+    function log(
+        address _liquidityProvider,
+        address _collateral,
+        uint256 _protocolFee,
+        address _author
+    ) external;
 }

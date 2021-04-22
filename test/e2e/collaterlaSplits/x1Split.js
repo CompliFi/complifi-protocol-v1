@@ -3,7 +3,7 @@ const StubCollateralSplit = artifacts.require("StubCollateralSplit");
 
 const FRACTION_MULTIPLIER = Math.pow(10, 12);
 
-contract("x1 Derivatives", accounts => {
+contract("x1 Derivatives", (accounts) => {
   let collateralSplit;
 
   beforeEach(async () => {
@@ -13,7 +13,8 @@ contract("x1 Derivatives", accounts => {
   });
 
   it("...should calculate split function.", async () => {
-    const callContract = async (value) => await callDerivative(collateralSplit.splitNominalValue, value);
+    const callContract = async (value) =>
+      await callDerivative(collateralSplit.splitNominalValue, value);
 
     assert.equal(await callContract(-1), calcSplit(-1), "-1");
     assert.equal(await callContract(-0.9999), calcSplit(-0.9999), "-0.9999");
@@ -36,12 +37,16 @@ contract("x1 Derivatives", accounts => {
 });
 
 function calcSplit(value) {
-  return trunc4((FRACTION_MULTIPLIER + value * FRACTION_MULTIPLIER)/ FRACTION_MULTIPLIER * 0.5)
+  return trunc4(
+    ((FRACTION_MULTIPLIER + value * FRACTION_MULTIPLIER) /
+      FRACTION_MULTIPLIER) *
+      0.5
+  );
 }
 function trunc4(value) {
-  return Math.trunc(value * FRACTION_MULTIPLIER)
+  return Math.trunc(value * FRACTION_MULTIPLIER);
 }
 
-async function callDerivative(func, value){
+async function callDerivative(func, value) {
   return (await func.call(value * FRACTION_MULTIPLIER)).toNumber();
 }

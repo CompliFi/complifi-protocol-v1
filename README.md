@@ -1,6 +1,7 @@
 # CompliFi Protocol
 
-Decentralised Derivatives That Do Not Default. No counterparty risk, no margin calls, no liquidations. 
+Decentralised Derivatives That Do Not Default. No counterparty risk, no margin
+calls, no liquidations.
 
 ## Setup
 
@@ -60,9 +61,9 @@ $ npm run coverage
 
 ## Deployment
 
-Create a copy of the file `.env.template`, and name it `.env`. Enter
-the BIP39 mnemonic phrase, the INFURA API key to use for deployment, and the
-gas price in gwei in `.env`. This file must not be checked into the repository.
+Create a copy of the file `.env.template`, and name it `.env`. Enter the BIP39
+mnemonic phrase, the INFURA API key to use for deployment, and the gas price in
+gwei in `.env`. This file must not be checked into the repository.
 
 Run `npm run migrate --network NETWORK`, where NETWORK is either `mainnet` or
 `rinkeby`.

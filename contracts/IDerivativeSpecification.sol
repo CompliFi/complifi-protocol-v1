@@ -1,16 +1,15 @@
-// "SPDX-License-Identifier: GNU General Public License v3.0"
+// "SPDX-License-Identifier: GPL-3.0-or-later"
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity 0.7.6;
 
 /// @title Derivative Specification interface
 /// @notice Immutable collection of derivative attributes
 /// @dev Created by the derivative's author and published to the DerivativeSpecificationRegistry
 interface IDerivativeSpecification {
-
     /// @notice Proof of a derivative specification
     /// @dev Verifies that contract is a derivative specification
     /// @return true if contract is a derivative specification
-    function isDerivativeSpecification() external pure returns(bool);
+    function isDerivativeSpecification() external pure returns (bool);
 
     /// @notice Set of oracles that are relied upon to measure changes in the state of the world
     /// between the start and the end of the Live period
@@ -35,30 +34,25 @@ interface IDerivativeSpecification {
     /// @return collateral split symbol
     function collateralSplitSymbol() external view returns (bytes32);
 
-    /// @notice Lifecycle parameter that define the length of the derivative's Minting period.
-    /// @dev Set in seconds
-    /// @return minting period value
-    function mintingPeriod() external view returns (uint);
-
     /// @notice Lifecycle parameter that define the length of the derivative's Live period.
     /// @dev Set in seconds
     /// @return live period value
-    function livePeriod() external view returns (uint);
+    function livePeriod() external view returns (uint256);
 
     /// @notice Parameter that determines starting nominal value of primary asset
     /// @dev Units of collateral theoretically swappable for 1 unit of primary asset
     /// @return primary nominal value
-    function primaryNominalValue() external view returns (uint);
+    function primaryNominalValue() external view returns (uint256);
 
     /// @notice Parameter that determines starting nominal value of complement asset
     /// @dev Units of collateral theoretically swappable for 1 unit of complement asset
     /// @return complement nominal value
-    function complementNominalValue() external view returns (uint);
+    function complementNominalValue() external view returns (uint256);
 
     /// @notice Minting fee rate due to the author of the derivative specification.
     /// @dev Percentage fee multiplied by 10 ^ 12
     /// @return author fee
-    function authorFee() external view returns (uint);
+    function authorFee() external view returns (uint256);
 
     /// @notice Symbol of the derivative
     /// @dev Should be resolved through DerivativeSpecificationRegistry contract
