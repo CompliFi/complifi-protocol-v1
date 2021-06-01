@@ -36,15 +36,22 @@ module.exports = async (done) => {
     // https://docs.chain.link/docs/reference-contracts
     await setOracle("ETH-USD");
     await setOracle("BTC-USD");
-    await setOracle("DAI-USD");
-    await setOracle("EUR-USD");
-    await setOracle("GBP-USD");
-    await setOracle("JPY-USD");
-    await setOracle("XAU-USD");
-    await setOracle("N225-JPY");
-    await setOracle("FTSE-GBP");
-    await setOracle("FASTGAS");
+    await setOracle("DOT-USD");
+    await setOracle("MATIC-USD");
     await setOracle("LINK-USD");
+    await setOracle("SUSHI-USD");
+
+    // await setOracle("LINK-USD");
+    // await setOracle("UNI-USD");
+    // await setOracle("DAI-USD");
+    // await setOracle("EUR-USD");
+    // await setOracle("GBP-USD");
+    // await setOracle("JPY-USD");
+    // await setOracle("XAU-USD");
+    // await setOracle("N225-JPY");
+    // await setOracle("FTSE-GBP");
+    // await setOracle("FASTGAS");
+
 
     done();
   } catch (e) {

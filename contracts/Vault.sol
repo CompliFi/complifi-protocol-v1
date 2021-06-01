@@ -36,13 +36,14 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         uint256 primaryConversion,
         uint256 complementConversion
     );
-    event Minted(uint256 minted, uint256 collateral, uint256 fee);
-    event Refunded(uint256 tokenAmount, uint256 collateral);
+    event Minted(address indexed recipient, uint256 minted, uint256 collateral, uint256 fee);
+    event Refunded(address indexed recipient, uint256 tokenAmount, uint256 collateral);
     event Redeemed(
+        address indexed recipient,
+        address tokenAddress,
         uint256 tokenAmount,
         uint256 conversion,
-        uint256 collateral,
-        bool isPrimary
+        uint256 collateral
     );
 
     /// @notice start of live period
@@ -254,7 +255,7 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         primaryToken.mint(_recipient, tokenAmount);
         complementToken.mint(_recipient, tokenAmount);
 
-        emit Minted(tokenAmount, _collateralAmount, feeAmount);
+        emit Minted(_recipient, tokenAmount, _collateralAmount, feeAmount);
     }
 
     function mintTo(address _recipient, uint256 _collateralAmount)
@@ -285,7 +286,7 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         complementToken.burnFrom(msg.sender, _tokenAmount);
         uint256 unDenominated = unDenominate(_tokenAmount);
 
-        emit Refunded(_tokenAmount, unDenominated);
+        emit Refunded(_recipient, _tokenAmount, unDenominated);
         doTransferOut(_recipient, unDenominated);
     }
 
@@ -328,18 +329,22 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         }
 
         if (state == State.Settled) {
-            redeemAsymmetric(
+            uint collateral = redeemAsymmetric(
                 _recipient,
                 primaryToken,
                 _primaryTokenAmount,
-                true
+                primaryConversion
             );
-            redeemAsymmetric(
+            collateral = redeemAsymmetric(
                 _recipient,
                 complementToken,
                 _complementTokenAmount,
-                false
-            );
+                complementConversion
+            ).add(collateral);
+
+            if (collateral > 0) {
+                doTransferOut(_recipient, collateral);
+            }
         }
     }
 
@@ -375,20 +380,15 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         address _recipient,
         IERC20MintedBurnable _derivativeToken,
         uint256 _amount,
-        bool _isPrimary
-    ) internal {
+        uint256 _conversion
+    ) internal returns(uint256 collateral){
         if (_amount == 0) {
-            return;
+            return 0;
         }
 
         _derivativeToken.burnFrom(msg.sender, _amount);
-        uint256 conversion =
-            _isPrimary ? primaryConversion : complementConversion;
-        uint256 collateral = _amount.mul(conversion).div(FRACTION_MULTIPLIER);
-        emit Redeemed(_amount, conversion, collateral, _isPrimary);
-        if (collateral > 0) {
-            doTransferOut(_recipient, collateral);
-        }
+        collateral = _amount.mul(_conversion) / FRACTION_MULTIPLIER;
+        emit Redeemed(_recipient, address(_derivativeToken),_amount, _conversion, collateral);
     }
 
     function denominate(uint256 _collateralAmount)

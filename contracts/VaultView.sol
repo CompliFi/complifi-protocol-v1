@@ -9,8 +9,10 @@ import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
 import "./IVault.sol";
 import "./tokens/IERC20Metadata.sol";
 
+/// @title Reading key data from specified Vault
 contract VaultView {
 
+    /// @notice Contains key information about a Vault
     struct Vault {
         address self;
         uint256 liveTime;
@@ -26,8 +28,10 @@ contract VaultView {
         uint oracleDecimals;
         address oracleIterator;
         address collateralSplit;
+        bool isPaused;
     }
 
+    /// @notice Contains key information about a derivative token
     struct Token {
         address self;
         string name;
@@ -36,6 +40,7 @@ contract VaultView {
         uint userBalance;
     }
 
+    /// @notice Contains key information from Derivative Specification
     struct DerivativeSpecification {
         address self;
         string name;
@@ -47,7 +52,25 @@ contract VaultView {
         bytes32[] oracleSymbols;
     }
 
-    function getVaultInfo(address _vault)
+    // Using vars to avoid stack do deep error
+    struct Vars {
+        IVault vault;
+        IDerivativeSpecification specification;
+        IERC20Metadata collateral;
+        IERC20 collateralToken;
+        IERC20Metadata primary;
+        IERC20Metadata complement;
+    }
+
+    /// @notice Getting information about a Vault, its derivative tokens and specification
+    /// @param _vault vault address
+    /// @return vaultData vault-specific information
+    /// @return derivativeSpecificationData vault's derivative specification
+    /// @return collateralData vault's collateral token metadata
+    /// @return lockedCollateralAmount vault's total locked collateral amount
+    /// @return primaryData vault's primary token metadata
+    /// @return complementData vault's complement token metadata
+    function getVaultInfo(address _vault, address _sender)
     external view
     returns (
         Vault memory vaultData,
@@ -58,77 +81,84 @@ contract VaultView {
         Token memory complementData
     )
     {
-        IVault vault = IVault(_vault);
+        Vars memory vars;
+        vars.vault = IVault(_vault);
 
         int256 underlyingStarts = 0;
-        if(uint256(vault.state()) > 0) {
-            underlyingStarts = vault.underlyingStarts(0);
+        if(uint256(vars.vault.state()) > 0) {
+            underlyingStarts = vars.vault.underlyingStarts(0);
         }
 
         int256 underlyingEnds = 0;
-        if(vault.primaryConversion() > 0 || vault.complementConversion() > 0) {
-            underlyingEnds = vault.underlyingEnds(0);
+        if(vars.vault.primaryConversion() > 0 || vars.vault.complementConversion() > 0) {
+            underlyingEnds = vars.vault.underlyingEnds(0);
         }
 
         vaultData = Vault(
-            address(_vault),
-            vault.liveTime(),
-            vault.settleTime(),
+            _vault,
+            vars.vault.liveTime(),
+            vars.vault.settleTime(),
             underlyingStarts,
             underlyingEnds,
-            vault.primaryConversion(),
-            vault.complementConversion(),
-            vault.protocolFee(),
-            vault.authorFeeLimit(),
-            uint256(vault.state()),
-            vault.oracles(0),
-            AggregatorV3Interface(vault.oracles(0)).decimals(),
-            vault.oracleIterators(0),
-            vault.collateralSplit()
+            vars.vault.primaryConversion(),
+            vars.vault.complementConversion(),
+            vars.vault.protocolFee(),
+            vars.vault.authorFeeLimit(),
+            uint256(vars.vault.state()),
+            vars.vault.oracles(0),
+            AggregatorV3Interface(vars.vault.oracles(0)).decimals(),
+            vars.vault.oracleIterators(0),
+            vars.vault.collateralSplit(),
+            vars.vault.paused()
         );
 
-        IDerivativeSpecification specification = vault.derivativeSpecification();
+        vars.specification = vars.vault.derivativeSpecification();
         derivativeSpecificationData = DerivativeSpecification(
-            address(specification),
-            specification.name(),
-            specification.symbol(),
-            specification.primaryNominalValue() + specification.complementNominalValue(),
-            specification.authorFee(),
-            specification.primaryNominalValue(),
-            specification.complementNominalValue(),
-            specification.oracleSymbols()
+            address(vars.specification),
+            vars.specification.name(),
+            vars.specification.symbol(),
+            vars.specification.primaryNominalValue() + vars.specification.complementNominalValue(),
+            vars.specification.authorFee(),
+            vars.specification.primaryNominalValue(),
+            vars.specification.complementNominalValue(),
+            vars.specification.oracleSymbols()
         );
 
-        IERC20Metadata collateral = IERC20Metadata(vault.collateralToken());
-        IERC20 collateralToken = IERC20(address(collateral));
+        vars.collateral = IERC20Metadata(vars.vault.collateralToken());
+        vars.collateralToken = IERC20(address(vars.collateral));
         collateralData = Token(
-            address(collateral),
-            collateral.name(),
-            collateral.symbol(),
-            collateral.decimals(),
-            collateralToken.balanceOf(msg.sender)
+            address(vars.collateral),
+            vars.collateral.name(),
+            vars.collateral.symbol(),
+            vars.collateral.decimals(),
+            _sender == address(0) ? 0 : vars.collateralToken.balanceOf(_sender)
         );
-        lockedCollateralAmount = collateralToken.balanceOf(address(vault));
+        lockedCollateralAmount = vars.collateralToken.balanceOf(_vault);
 
-        IERC20Metadata primary = IERC20Metadata(vault.primaryToken());
+        vars.primary = IERC20Metadata(vars.vault.primaryToken());
         primaryData = Token(
-            address(primary),
-            primary.name(),
-            primary.symbol(),
-            primary.decimals(),
-            IERC20(address(primary)).balanceOf(msg.sender)
+            address(vars.primary),
+            vars.primary.name(),
+            vars.primary.symbol(),
+            vars.primary.decimals(),
+            _sender == address(0) ? 0 : IERC20(address(vars.primary)).balanceOf(_sender)
         );
 
-        IERC20Metadata complement = IERC20Metadata(vault.complementToken());
+        vars.complement = IERC20Metadata(vars.vault.complementToken());
         complementData = Token(
-            address(complement),
-            complement.name(),
-            complement.symbol(),
-            complement.decimals(),
-            IERC20(address(complement)).balanceOf(msg.sender)
+            address(vars.complement),
+            vars.complement.name(),
+            vars.complement.symbol(),
+            vars.complement.decimals(),
+            _sender == address(0) ? 0 : IERC20(address(vars.complement)).balanceOf(_sender)
         );
     }
 
+    /// @notice Getting vault derivative token balances
+    /// @param _owner address for which balances are being extracted
+    /// @param _vaults list of all vaults
+    /// @return primaries primary token balances
+    /// @return complements complement token balances
     function getVaultTokenBalancesByOwner(
         address _owner,
         address[] calldata _vaults
@@ -148,6 +178,10 @@ contract VaultView {
         }
     }
 
+    /// @notice Getting any ERC20 token balances
+    /// @param _owner address for which balances are being extracted
+    /// @param _tokens list of all tokens
+    /// @return balances token balances
     function getERC20BalancesByOwner(address _owner, address[] calldata _tokens)
         external
         view

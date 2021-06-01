@@ -34,7 +34,7 @@ module.exports = async (done) => {
       return TOKEN.address;
     };
     const ASSET = await setStubToken("ASSET", 18);
-    const STBL = await setStubToken("STBL", 6);
+    const STBL = await setStubToken("STBL", 6); // "0x1f582ec6233d8efe42342f2ebf985fb2de86af91"
 
     const setStubFeed = async (symbol) => {
       const currentTime = Math.floor(Date.now() / 1000);
@@ -50,7 +50,7 @@ module.exports = async (done) => {
       console.log(`Added feed ${FEED.address} as ${symbol} in ${result.tx}`);
       return FEED.address;
     };
-    const ASSETUSD = await setStubFeed("ASSET-USD");
+    const ASSETUSD = await setStubFeed("ASSET-USD"); // "0xc386FF7BFc1C6a8Dd38039da3CdbC607d42101Ae"
 
     const setDerivativeSpecification = async (symbol, params) => {
       console.log(
@@ -69,36 +69,6 @@ module.exports = async (done) => {
       );
     };
 
-    // await setDerivativeSpecification("InsurASSET", [
-    //   accounts[1],
-    //   "Insured ASSET",
-    //   "InsurASSET",
-    //   [web3.utils.keccak256(ASSETUSD)],
-    //   [web3.utils.keccak256("ChainlinkIterator")],
-    //   web3.utils.keccak256(ASSET),
-    //   web3.utils.keccak256("Insur"),
-    //   1 * 24 * 3600,
-    //   1,
-    //   1,
-    //   0 * FRACTION_MULTIPLIER,
-    //   "",
-    // ]);
-    //
-    // await setDerivativeSpecification("CallASSET", [
-    //   accounts[1],
-    //   "ASSET Call Option",
-    //   "CallASSET",
-    //   [web3.utils.keccak256(ASSETUSD)],
-    //   [web3.utils.keccak256("ChainlinkIterator")],
-    //   web3.utils.keccak256(ASSET),
-    //   web3.utils.keccak256("CallOption"),
-    //   1 * 24 * 3600,
-    //   0,
-    //   1,
-    //   0 * FRACTION_MULTIPLIER,
-    //   "",
-    // ]);
-
     await setDerivativeSpecification("ASSETx5-STBL", [
       accounts[1],
       "ASSETx5 STBL",
@@ -107,37 +77,7 @@ module.exports = async (done) => {
       [web3.utils.keccak256("ChainlinkIterator")],
       web3.utils.keccak256(STBL),
       web3.utils.keccak256("x5"),
-      1 * 24 * 3600,
-      1,
-      1,
-      0 * FRACTION_MULTIPLIER,
-      "",
-    ]);
-
-    await setDerivativeSpecification("28D-ASSETx5-STBL", [
-      accounts[1],
-      "28D ASSETx5 STBL",
-      "28D-ASSETx5-STBL",
-      [web3.utils.keccak256(ASSETUSD)],
-      [web3.utils.keccak256("ChainlinkIterator")],
-      web3.utils.keccak256(STBL),
-      web3.utils.keccak256("x5"),
-      28 * 24 * 3600,
-      1,
-      1,
-      0 * FRACTION_MULTIPLIER,
-      "",
-    ]);
-
-    await setDerivativeSpecification("1H-ASSETx5-STBL", [
-      accounts[1],
-      "1H ASSETx5 STBL",
-      "1H-ASSETx5-STBL",
-      [web3.utils.keccak256(ASSETUSD)],
-      [web3.utils.keccak256("ChainlinkIterator")],
-      web3.utils.keccak256(STBL),
-      web3.utils.keccak256("x5"),
-      3600,
+      40 * 24 * 3600,
       1,
       1,
       0 * FRACTION_MULTIPLIER,
@@ -152,7 +92,7 @@ module.exports = async (done) => {
     //   [web3.utils.keccak256("ChainlinkIterator")],
     //   web3.utils.keccak256(ASSET),
     //   web3.utils.keccak256("Stab"),
-    //   1 * 24 * 3600,
+    //   40 * 24 * 3600,
     //   1,
     //   1,
     //   0 * FRACTION_MULTIPLIER,
@@ -167,86 +107,41 @@ module.exports = async (done) => {
     //   [web3.utils.keccak256("ChainlinkIterator")],
     //   web3.utils.keccak256(STBL),
     //   web3.utils.keccak256("x1"),
-    //   1 * 24 * 3600,
+    //   40 * 24 * 3600,
     //   1,
     //   1,
     //   0 * FRACTION_MULTIPLIER,
     //   "",
     // ]);
-
-    // await setDerivativeSpecification("1H-InsurASSET", [
+    //
+    // await setDerivativeSpecification("InsurASSET", [
     //   accounts[1],
-    //   "1H Insured ASSET",
-    //   "1H-InsurASSET",
+    //   "Insured ASSET",
+    //   "InsurASSET",
     //   [web3.utils.keccak256(ASSETUSD)],
     //   [web3.utils.keccak256("ChainlinkIterator")],
     //   web3.utils.keccak256(ASSET),
     //   web3.utils.keccak256("Insur"),
-    //   45 * 60,
+    //   40 * 24 * 3600,
     //   1,
     //   1,
-    //   0.02 * FRACTION_MULTIPLIER,
-    //   ''
+    //   0 * FRACTION_MULTIPLIER,
+    //   "",
     // ]);
     //
-    // await setDerivativeSpecification("1H-CallASSET", [
+    // await setDerivativeSpecification("CallASSET", [
     //   accounts[1],
-    //   "1H ASSET Call Option",
-    //   "1H-CallASSET",
+    //   "ASSET Call Option",
+    //   "CallASSET",
     //   [web3.utils.keccak256(ASSETUSD)],
     //   [web3.utils.keccak256("ChainlinkIterator")],
     //   web3.utils.keccak256(ASSET),
     //   web3.utils.keccak256("CallOption"),
-    //   45 * 60,
+    //   40 * 24 * 3600,
     //   0,
     //   1,
-    //   0.005 * FRACTION_MULTIPLIER,
-    //   ''
-    // ]);
-    //
-    // await setDerivativeSpecification("1H-ASSETx5", [
-    //   accounts[1],
-    //   "1H ASSETx5 Leveraged Token",
-    //   "1H-ASSETx5",
-    //   [web3.utils.keccak256(ASSETUSD)],
-    //   [web3.utils.keccak256("ChainlinkIterator")],
-    //   web3.utils.keccak256(STBL),
-    //   web3.utils.keccak256("x5"),
-    //   45 * 60,
-    //   1,
-    //   1,
-    //   0.001 * FRACTION_MULTIPLIER,
-    //   ''
-    // ]);
-    //
-    // await setDerivativeSpecification("1H-StabASSET", [
-    //   accounts[1],
-    //   "1H Stable ASSET",
-    //   "1H-StabASSET",
-    //   [web3.utils.keccak256(ASSETUSD)],
-    //   [web3.utils.keccak256("ChainlinkIterator")],
-    //   web3.utils.keccak256(ASSET),
-    //   web3.utils.keccak256("Stab"),
-    //   45 * 60,
-    //   1,
-    //   1,
-    //   0.005 * FRACTION_MULTIPLIER,
-    //   ''
-    // ]);
-    //
-    // await setDerivativeSpecification("1H-ASSETx1", [
-    //   accounts[1],
-    //   "1H ASSETx1 Leveraged Token",
-    //   "1H-ASSETx1",
-    //   [web3.utils.keccak256(ASSETUSD)],
-    //   [web3.utils.keccak256("ChainlinkIterator")],
-    //   web3.utils.keccak256(STBL),
-    //   web3.utils.keccak256("x1"),
-    //   45 * 60,
-    //   1,
-    //   1,
-    //   0.00999 * FRACTION_MULTIPLIER,
-    //   ''
+    //   0 * FRACTION_MULTIPLIER,
+    //   "",
     // ]);
     done();
   } catch (e) {

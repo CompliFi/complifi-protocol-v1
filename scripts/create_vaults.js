@@ -1,7 +1,6 @@
 "use strict";
 
 const VaultFactory = artifacts.require("VaultFactory");
-const VaultFactoryProxy = artifacts.require("VaultFactoryProxy");
 const Vault = artifacts.require("Vault");
 const StubFeed = artifacts.require("StubFeed");
 
@@ -20,7 +19,16 @@ const wait = async (param) => {
   return param;
 };
 
+const VAULT_FACTORY_PROXY = {
+  "1": "0x3269DeB913363eE58E221808661CfDDa9d898127",
+  "4": "0x0d2497c1eCB40F77BFcdD99f04AC049c9E9d83F7",
+  "137": "0xE970b0B1a2789e3708eC7DfDE88FCDbA5dfF246a",
+  "97": "0x42d002b519820b4656CcAe850B884aE355A4E349",
+  "80001": "0x277Dc5711B3D3F2C57ab7d28c5A9430E599ba42C"
+};
+
 module.exports = async (done) => {
+  console.log(`starting create_vaults, version=${process.env.APP_VERSION}`);
   const networkType = await web3.eth.net.getNetworkType();
   const networkId = await web3.eth.net.getId();
   const accounts = await web3.eth.getAccounts();
@@ -31,9 +39,16 @@ module.exports = async (done) => {
   try {
 
   let INSTRUMENTS = [];
-  if (networkId === 1) {
+  if (networkId === 1 || networkId === 137) {
     INSTRUMENTS = [
       "BTCx5-USDC",
+      "ETHx5-USDC",
+      "LINKx5-USDC",
+      "MATICx5-USDC",
+
+      // "DOTx5-USDC",
+      // "SUSHIx5-USDC",
+
       // "InsurETH",
       // "StabBTC",
       // "CallBTC",
@@ -69,22 +84,27 @@ module.exports = async (done) => {
     ];
   }
 
-  const vaultFactoryAddress = (await VaultFactoryProxy.deployed()).address;
+  let vaultFactoryAddress = process.env.VAULT_FACTORY_PROXY_ADDRESS;
+  if(!vaultFactoryAddress) {
+    vaultFactoryAddress = VAULT_FACTORY_PROXY[networkId];
+  }
+
   console.log("vaultFactoryAddress " + vaultFactoryAddress);
   const vaultFactory = await VaultFactory.at(vaultFactoryAddress);
 
-  const daysBefore = days(0);
+  const daysBefore = days(39);
 
-  const derivativeCreated = Math.floor(Date.now() / 1000) - daysBefore;
+  const derivativeTraded = Math.floor(Date.now() / 1000);
+  const derivativeLive = derivativeTraded - daysBefore;
 
   for (const instrument of INSTRUMENTS) {
       console.log(
-        "Creating vault " + instrument + " initialized at " + derivativeCreated
+        "Creating vault " + instrument + " live at " + derivativeLive + " traded at " + derivativeTraded
       );
       await wait(
         await vaultFactory.createVault(
           web3.utils.keccak256(instrument),
-          derivativeCreated
+          derivativeLive
         )
       );
       const lastVaultIndex = await vaultFactory.getLastVaultIndex.call();

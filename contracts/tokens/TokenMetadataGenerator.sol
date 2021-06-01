@@ -102,7 +102,7 @@ contract TokenMetadataGenerator {
             return "Mar";
         }
         if (_month == 4) {
-            return "Arp";
+            return "Apr";
         }
         if (_month == 5) {
             return "May";

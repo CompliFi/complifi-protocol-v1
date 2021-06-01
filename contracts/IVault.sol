@@ -101,4 +101,6 @@ interface IVault {
         uint256 _complementTokenAmount,
         uint256[] calldata _underlyingEndRoundHints
     ) external;
+
+    function paused() external view returns (bool);
 }

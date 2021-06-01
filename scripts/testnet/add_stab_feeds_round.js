@@ -2,11 +2,16 @@
 
 const StubFeed = artifacts.require("StubFeed");
 
-const FEEDS = ["0xc386FF7BFc1C6a8Dd38039da3CdbC607d42101Ae","0x6e367e7C012cb6c9A8755c6fE022DCD82130C4F1"];
+const FEEDS = {
+  "4": ["0xc386FF7BFc1C6a8Dd38039da3CdbC607d42101Ae"],
+  "97": ["0x67b8653E2e0F03fCB07294bC3c1b6b4aeb91eA39"],
+  "80001": ["0x363d5D5AB77bAa0f66166C593A7223d2bFf7daF3"]
+};
 
 const randomRange = (range) => Math.random() * range - range / 2;
 
 module.exports = async (done) => {
+  console.log(`starting add_stab_feeds_round, version=${process.env.APP_VERSION}`);
   const networkType = await web3.eth.net.getNetworkType();
   const networkId = await web3.eth.net.getId();
   const accounts = await web3.eth.getAccounts();
@@ -14,7 +19,15 @@ module.exports = async (done) => {
   console.log("network id:" + networkId);
   console.log("accounts:" + accounts);
 
-  for (const feedAddress of FEEDS) {
+  let feeds;
+  const feedsRaw = process.env.FEED_ADDRESSES;
+  if(!feedsRaw) {
+    feeds = FEEDS[networkId];
+  } else {
+    feeds = feedsRaw.split(",");
+  }
+
+  for (const feedAddress of feeds) {
     try {
       console.log("Add new round to feed address " + feedAddress);
       const feed = await StubFeed.at(feedAddress);
