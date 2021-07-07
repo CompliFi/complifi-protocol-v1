@@ -36,8 +36,17 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         uint256 primaryConversion,
         uint256 complementConversion
     );
-    event Minted(address indexed recipient, uint256 minted, uint256 collateral, uint256 fee);
-    event Refunded(address indexed recipient, uint256 tokenAmount, uint256 collateral);
+    event Minted(
+        address indexed recipient,
+        uint256 minted,
+        uint256 collateral,
+        uint256 fee
+    );
+    event Refunded(
+        address indexed recipient,
+        uint256 tokenAmount,
+        uint256 collateral
+    );
     event Redeemed(
         address indexed recipient,
         address tokenAddress,
@@ -329,18 +338,20 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         }
 
         if (state == State.Settled) {
-            uint collateral = redeemAsymmetric(
-                _recipient,
-                primaryToken,
-                _primaryTokenAmount,
-                primaryConversion
-            );
+            uint256 collateral =
+                redeemAsymmetric(
+                    _recipient,
+                    primaryToken,
+                    _primaryTokenAmount,
+                    primaryConversion
+                );
             collateral = redeemAsymmetric(
                 _recipient,
                 complementToken,
                 _complementTokenAmount,
                 complementConversion
-            ).add(collateral);
+            )
+                .add(collateral);
 
             if (collateral > 0) {
                 doTransferOut(_recipient, collateral);
@@ -381,14 +392,20 @@ contract Vault is Ownable, Pausable, IPausableVault, ReentrancyGuard {
         IERC20MintedBurnable _derivativeToken,
         uint256 _amount,
         uint256 _conversion
-    ) internal returns(uint256 collateral){
+    ) internal returns (uint256 collateral) {
         if (_amount == 0) {
             return 0;
         }
 
         _derivativeToken.burnFrom(msg.sender, _amount);
         collateral = _amount.mul(_conversion) / FRACTION_MULTIPLIER;
-        emit Redeemed(_recipient, address(_derivativeToken),_amount, _conversion, collateral);
+        emit Redeemed(
+            _recipient,
+            address(_derivativeToken),
+            _amount,
+            _conversion,
+            collateral
+        );
     }
 
     function denominate(uint256 _collateralAmount)

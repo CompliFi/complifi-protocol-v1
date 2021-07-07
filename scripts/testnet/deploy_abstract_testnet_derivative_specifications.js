@@ -84,6 +84,21 @@ module.exports = async (done) => {
       "",
     ]);
 
+    // await setDerivativeSpecification("CallASSET", [
+    //   accounts[1],
+    //   "ASSET Call Option",
+    //   "CallASSET",
+    //   [web3.utils.keccak256(ASSETUSD)],
+    //   [web3.utils.keccak256("ChainlinkIterator")],
+    //   web3.utils.keccak256(ASSET),
+    //   web3.utils.keccak256("CallOption"),
+    //   40 * 24 * 3600,
+    //   0,
+    //   1,
+    //   0 * FRACTION_MULTIPLIER,
+    //   "",
+    // ]);
+
     // await setDerivativeSpecification("StabASSET", [
     //   accounts[1],
     //   "Stable ASSET",
@@ -124,21 +139,6 @@ module.exports = async (done) => {
     //   web3.utils.keccak256("Insur"),
     //   40 * 24 * 3600,
     //   1,
-    //   1,
-    //   0 * FRACTION_MULTIPLIER,
-    //   "",
-    // ]);
-    //
-    // await setDerivativeSpecification("CallASSET", [
-    //   accounts[1],
-    //   "ASSET Call Option",
-    //   "CallASSET",
-    //   [web3.utils.keccak256(ASSETUSD)],
-    //   [web3.utils.keccak256("ChainlinkIterator")],
-    //   web3.utils.keccak256(ASSET),
-    //   web3.utils.keccak256("CallOption"),
-    //   40 * 24 * 3600,
-    //   0,
     //   1,
     //   0 * FRACTION_MULTIPLIER,
     //   "",

@@ -3,15 +3,17 @@
 const StubFeed = artifacts.require("StubFeed");
 
 const FEEDS = {
-  "4": ["0xc386FF7BFc1C6a8Dd38039da3CdbC607d42101Ae"],
-  "97": ["0x67b8653E2e0F03fCB07294bC3c1b6b4aeb91eA39"],
-  "80001": ["0x363d5D5AB77bAa0f66166C593A7223d2bFf7daF3"]
+  4: ["0xc386FF7BFc1C6a8Dd38039da3CdbC607d42101Ae"],
+  97: ["0x67b8653E2e0F03fCB07294bC3c1b6b4aeb91eA39"],
+  80001: ["0x363d5D5AB77bAa0f66166C593A7223d2bFf7daF3"],
 };
 
 const randomRange = (range) => Math.random() * range - range / 2;
 
 module.exports = async (done) => {
-  console.log(`starting add_stab_feeds_round, version=${process.env.APP_VERSION}`);
+  console.log(
+    `starting add_stab_feeds_round, version=${process.env.APP_VERSION}`
+  );
   const networkType = await web3.eth.net.getNetworkType();
   const networkId = await web3.eth.net.getId();
   const accounts = await web3.eth.getAccounts();
@@ -21,7 +23,7 @@ module.exports = async (done) => {
 
   let feeds;
   const feedsRaw = process.env.FEED_ADDRESSES;
-  if(!feedsRaw) {
+  if (!feedsRaw) {
     feeds = FEEDS[networkId];
   } else {
     feeds = feedsRaw.split(",");

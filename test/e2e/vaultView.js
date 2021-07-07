@@ -7,12 +7,14 @@ const StubToken = artifacts.require("StubToken");
 const StubFeed = artifacts.require("StubFeed");
 const StubDerivative = artifacts.require("StubDerivative");
 
-contract("VaultView", accounts => {
+contract("VaultView", (accounts) => {
   let vaultFactory;
   let vaultView;
   let collateralToken;
   before(async () => {
-    vaultFactory = await VaultFactory.at((await VaultFactoryProxy.deployed()).address);
+    vaultFactory = await VaultFactory.at(
+      (await VaultFactoryProxy.deployed()).address
+    );
 
     let stubFeed = await StubFeed.new();
     await vaultFactory.setOracle(stubFeed.address);
@@ -24,7 +26,8 @@ contract("VaultView", accounts => {
       [web3.utils.keccak256(stubFeed.address)],
       [web3.utils.keccak256("ChainlinkIterator")],
       web3.utils.keccak256(collateralToken.address),
-      {from: accounts[0]});
+      { from: accounts[0] }
+    );
     await vaultFactory.setDerivativeSpecification(specification.address);
 
     vaultView = await VaultView.new();
@@ -32,7 +35,10 @@ contract("VaultView", accounts => {
 
   it("...should return vault config.", async () => {
     const derivativeLive = Math.floor(Date.now() / 1000);
-    await vaultFactory.createVault(web3.utils.keccak256("STUB"), derivativeLive);
+    await vaultFactory.createVault(
+      web3.utils.keccak256("STUB"),
+      derivativeLive
+    );
     const lastVaultIndex = await vaultFactory.getLastVaultIndex.call();
     const vault = await vaultFactory.getVault.call(lastVaultIndex);
 
@@ -49,7 +55,10 @@ contract("VaultView", accounts => {
 
   it("...should return vault config for 0x0 sender.", async () => {
     const derivativeLive = Math.floor(Date.now() / 1000);
-    await vaultFactory.createVault(web3.utils.keccak256("STUB"), derivativeLive);
+    await vaultFactory.createVault(
+      web3.utils.keccak256("STUB"),
+      derivativeLive
+    );
     const lastVaultIndex = await vaultFactory.getLastVaultIndex.call();
     const vault = await vaultFactory.getVault.call(lastVaultIndex);
 
@@ -57,10 +66,12 @@ contract("VaultView", accounts => {
 
     await vaultInstance.initialize([100]);
 
-
     const userBalance = 1000;
     await collateralToken.mint(accounts[0], userBalance);
-    const data = await vaultView.getVaultInfo.call(vault, '0x0000000000000000000000000000000000000000');
+    const data = await vaultView.getVaultInfo.call(
+      vault,
+      "0x0000000000000000000000000000000000000000"
+    );
     console.log(JSON.stringify(data));
     assert.equal(data["collateralData"]["userBalance"], 0);
   });

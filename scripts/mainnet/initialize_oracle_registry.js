@@ -52,7 +52,6 @@ module.exports = async (done) => {
     // await setOracle("FTSE-GBP");
     // await setOracle("FASTGAS");
 
-
     done();
   } catch (e) {
     console.log(e);

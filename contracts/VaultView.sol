@@ -11,7 +11,6 @@ import "./tokens/IERC20Metadata.sol";
 
 /// @title Reading key data from specified Vault
 contract VaultView {
-
     /// @notice Contains key information about a Vault
     struct Vault {
         address self;
@@ -25,7 +24,7 @@ contract VaultView {
         uint256 authorFeeLimit;
         uint256 state;
         address oracle;
-        uint oracleDecimals;
+        uint256 oracleDecimals;
         address oracleIterator;
         address collateralSplit;
         bool isPaused;
@@ -37,7 +36,7 @@ contract VaultView {
         string name;
         string symbol;
         uint8 decimals;
-        uint userBalance;
+        uint256 userBalance;
     }
 
     /// @notice Contains key information from Derivative Specification
@@ -45,10 +44,10 @@ contract VaultView {
         address self;
         string name;
         string symbol;
-        uint denomination;
-        uint authorFee;
-        uint primaryNominalValue;
-        uint complementNominalValue;
+        uint256 denomination;
+        uint256 authorFee;
+        uint256 primaryNominalValue;
+        uint256 complementNominalValue;
         bytes32[] oracleSymbols;
     }
 
@@ -71,26 +70,30 @@ contract VaultView {
     /// @return primaryData vault's primary token metadata
     /// @return complementData vault's complement token metadata
     function getVaultInfo(address _vault, address _sender)
-    external view
-    returns (
-        Vault memory vaultData,
-        DerivativeSpecification memory derivativeSpecificationData,
-        Token memory collateralData,
-        uint lockedCollateralAmount,
-        Token memory primaryData,
-        Token memory complementData
-    )
+        external
+        view
+        returns (
+            Vault memory vaultData,
+            DerivativeSpecification memory derivativeSpecificationData,
+            Token memory collateralData,
+            uint256 lockedCollateralAmount,
+            Token memory primaryData,
+            Token memory complementData
+        )
     {
         Vars memory vars;
         vars.vault = IVault(_vault);
 
         int256 underlyingStarts = 0;
-        if(uint256(vars.vault.state()) > 0) {
+        if (uint256(vars.vault.state()) > 0) {
             underlyingStarts = vars.vault.underlyingStarts(0);
         }
 
         int256 underlyingEnds = 0;
-        if(vars.vault.primaryConversion() > 0 || vars.vault.complementConversion() > 0) {
+        if (
+            vars.vault.primaryConversion() > 0 ||
+            vars.vault.complementConversion() > 0
+        ) {
             underlyingEnds = vars.vault.underlyingEnds(0);
         }
 
@@ -117,7 +120,8 @@ contract VaultView {
             address(vars.specification),
             vars.specification.name(),
             vars.specification.symbol(),
-            vars.specification.primaryNominalValue() + vars.specification.complementNominalValue(),
+            vars.specification.primaryNominalValue() +
+                vars.specification.complementNominalValue(),
             vars.specification.authorFee(),
             vars.specification.primaryNominalValue(),
             vars.specification.complementNominalValue(),
@@ -141,7 +145,9 @@ contract VaultView {
             vars.primary.name(),
             vars.primary.symbol(),
             vars.primary.decimals(),
-            _sender == address(0) ? 0 : IERC20(address(vars.primary)).balanceOf(_sender)
+            _sender == address(0)
+                ? 0
+                : IERC20(address(vars.primary)).balanceOf(_sender)
         );
 
         vars.complement = IERC20Metadata(vars.vault.complementToken());
@@ -150,7 +156,9 @@ contract VaultView {
             vars.complement.name(),
             vars.complement.symbol(),
             vars.complement.decimals(),
-            _sender == address(0) ? 0 : IERC20(address(vars.complement)).balanceOf(_sender)
+            _sender == address(0)
+                ? 0
+                : IERC20(address(vars.complement)).balanceOf(_sender)
         );
     }
 
